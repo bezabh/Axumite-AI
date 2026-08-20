@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .serif-luxury {
+    font-family: 'Libre Baskerville', 'Cinzel', serif;
+  }
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-ethiopic {
+    font-family: 'Noto Sans Ethiopic', 'Plus Jakarta Sans', sans-serif;
+  }
+  .font-geez-calligraphy {
+    font-family: 'Noto Serif Ethiopic', 'Libre Baskerville', 'Cinzel', serif;
+  }
+  .font-geez-modern {
+    font-family: 'Noto Sans Ethiopic', 'Plus Jakarta Sans', sans-serif;
+  }
+  .font-birana-manuscript {
+    font-family: 'Noto Serif Ethiopic', 'Cinzel', 'Libre Baskerville', serif;
+    letter-spacing: 0.03em;
+  }
+  .metallic-gold-shimmer {
+    background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: goldShimmer 6s linear infinite;
+  }
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #8E6D28 0%, #E1C47D 25%, #F3E5AB 50%, #C5A059 75%, #8E6D28 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .gold-gradient {
+    background: linear-gradient(135deg, #8E6D28 0%, #E1C47D 25%, #F3E5AB 50%, #C5A059 75%, #8E6D28 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .bg-gold-metallic {
+    background: linear-gradient(135deg, #8E6D28 0%, #C5A059 50%, #E1C47D 100%);
+  }
+  .border-gold-subtle {
+    border-color: rgba(197, 160, 89, 0.2);
+  }
+  .glow-gold {
+    box-shadow: 0 0 25px -5px rgba(197, 160, 89, 0.15);
+  }
+  .glow-gold-lg {
+    box-shadow: 0 0 50px -10px rgba(197, 160, 89, 0.25);
+  }
+  .stela-glow {
+    filter: drop-shadow(0 0 20px rgba(197, 160, 89, 0.25));
+  }
+  .circuit-pattern {
+    background-image: radial-gradient(circle, rgba(197, 160, 89, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .gold-ambient-light {
+    background: radial-gradient(circle at 50% 0%, rgba(197, 160, 89, 0.08) 0%, rgba(142, 109, 40, 0.02) 45%, transparent 70%);
+  }
+  .gold-glow-animated {
+    animation: goldGlowPulse 6s ease-in-out infinite;
+  }
+  .gold-interactive-glow {
+    transition: all 0.3s ease;
+  }
+  .gold-interactive-glow:hover {
+    box-shadow: 0 0 20px 2px rgba(197, 160, 89, 0.25);
+    border-color: rgba(225, 196, 125, 0.6);
+  }
+  .icon-gold-glow {
+    filter: drop-shadow(0 0 6px rgba(197, 160, 89, 0.4));
+  }
+  .icon-gold-dark-glow {
+    filter: drop-shadow(0 0 8px rgba(197, 160, 89, 0.5));
+  }
+  .icon-emerald-glow {
+    filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.4));
+  }
+  .icon-amber-glow {
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4));
+  }
+}
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Global SVG Lucide Icon Enhancements */
+svg.lucide {
+  transition: transform 0.2s ease, filter 0.2s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+button:hover svg.lucide, .group:hover svg.lucide {
+  transform: scale(1.08);
+}
+
+@keyframes goldGlowPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes goldPulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px -3px rgba(197, 160, 89, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px 4px rgba(197, 160, 89, 0.45);
+  }
+}
+
+@keyframes continuousRollRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.06);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes background3DRoll {
+  0% {
+    transform: rotate(0deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1.1);
+  }
+}
+
+.animate-continuous-roll {
+  animation: continuousRollRotate 28s linear infinite;
+}
+
+.animate-bg-3d-roll {
+  animation: background3DRoll 45s linear infinite;
+}
+
+.gold-pulse-box {
+  animation: goldPulseGlow 4s ease-in-out infinite;
+}
+
+/* Custom Branding & Metallic Gold Theme Variables */
+:root {
+  --axum-gold: #E1C47D;
+  --axum-gold-glow: rgba(225, 196, 125, 0.4);
+  --axum-gold-text: #D4AF37;
+  --axum-hue-primary: #0F2856;
+  --axum-shimmer-active: 1;
+}
+
+.text-axum-gold {
+  color: var(--axum-gold, #E1C47D) !important;
+}
+
+.bg-axum-gold {
+  background-color: var(--axum-gold, #E1C47D) !important;
+}
+
+.border-axum-gold {
+  border-color: var(--axum-gold, #E1C47D) !important;
+}
+
+.gold-shimmer-accent {
+  background: linear-gradient(135deg, var(--axum-gold, #E1C47D) 0%, #FFFFFF 50%, var(--axum-gold, #E1C47D) 100%);
+  background-size: 200% auto;
+  animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Custom Matte Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #1C170E;
+  border-radius: 9999px;
+  border: 1px solid var(--axum-gold, rgba(197, 160, 89, 0.2));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2E2618;
+}
+
+/* ========================================================================= */
+/* GLOBAL TYPOGRAPHY MODES: Standard Modern vs. Historical Calligraphic Ge'ez */
+/* ========================================================================= */
+html.font-theme-calligraphic body,
+html.font-theme-calligraphic .font-sans,
+html.font-theme-calligraphic [class*="font-ethiopic"] {
+  font-family: 'Noto Serif Ethiopic', 'Libre Baskerville', 'Cinzel', serif !important;
+}
+
+html.font-theme-calligraphic h1,
+html.font-theme-calligraphic h2,
+html.font-theme-calligraphic h3,
+html.font-theme-calligraphic h4,
+html.font-theme-calligraphic .serif-luxury {
+  font-family: 'Cinzel', 'Noto Serif Ethiopic', 'Libre Baskerville', serif !important;
+  letter-spacing: 0.025em;
+}
+
+html.font-theme-modern body,
+html.font-theme-modern .font-sans {
+  font-family: 'Plus Jakarta Sans', 'Noto Sans Ethiopic', sans-serif !important;
+}
+
+

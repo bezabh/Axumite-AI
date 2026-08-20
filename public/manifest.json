@@ -1,0 +1,19 @@
+{
+  "name": "AXUMITE AI — Luxury AI Heritage & Intelligence",
+  "short_name": "AXUMITE AI",
+  "description": "Ultra-luxury AI platform combining ancient Axumite obelisk heritage with cutting-edge Gemini intelligence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities", "education", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

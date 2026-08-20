@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="20" fill="#050505"/>
+  <!-- Outer Gold Ring -->
+  <circle cx="50" cy="46" r="38" fill="none" stroke="url(#goldGrad)" stroke-width="3"/>
+  <circle cx="12" cy="46" r="2.5" fill="#F3E5AB"/>
+  <circle cx="88" cy="46" r="2.5" fill="#F3E5AB"/>
+  
+  <!-- Obelisk Body -->
+  <path d="M50 12 L64 78 L36 78 Z" fill="url(#goldGrad)"/>
+  
+  <!-- Circuit Traces on Obelisk -->
+  <path d="M50 20 L50 40 M50 30 L55 35 M50 45 L45 52 M50 50 L50 72 M46 60 L46 72 M54 58 L54 72" stroke="#050505" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  <circle cx="50" cy="20" r="1.5" fill="#050505"/>
+  <circle cx="55" cy="35" r="1.5" fill="#050505"/>
+  <circle cx="45" cy="52" r="1.5" fill="#050505"/>
+  
+  <!-- Base Pedestal -->
+  <rect x="30" y="78" width="40" height="5" rx="2" fill="url(#goldGrad)"/>
+  
+  <!-- Text AXUMITE AI -->
+  <text x="50" y="93" font-family="serif" font-size="8.5" font-weight="bold" fill="#F3E5AB" text-anchor="middle" letter-spacing="1">AXUMITE AI</text>
+  
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8E6D28" />
+      <stop offset="30%" stop-color="#F3E5AB" />
+      <stop offset="70%" stop-color="#C5A059" />
+      <stop offset="100%" stop-color="#8E6D28" />
+    </linearGradient>
+  </defs>
+</svg>
