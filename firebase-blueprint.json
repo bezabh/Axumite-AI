@@ -1,0 +1,126 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Axumite AI User profile, subscription status, and role authority",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["Creator", "Guest", "Admin", "User", "Axumite Sovereign Scholar", "ኤርትራዊ AI Pro", "Free Member"] },
+        "phoneNumber": { "type": "string" },
+        "isEmailVerified": { "type": "boolean" },
+        "isPhoneVerified": { "type": "boolean" },
+        "tokensRemaining": { "type": "number" },
+        "preferredLanguage": { "type": "string" },
+        "avatar": { "type": "string" },
+        "storageUsedBytes": { "type": "number" },
+        "storageQuotaBytes": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "UserFile": {
+      "title": "UserFile",
+      "description": "User uploaded documents, manuscripts, audio clips, and images with metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "fileName": { "type": "string" },
+        "fileSize": { "type": "number" },
+        "fileType": { "type": "string" },
+        "category": { "type": "string", "enum": ["document", "image", "audio", "geez_script", "video", "other"] },
+        "fileData": { "type": "string" },
+        "description": { "type": "string" },
+        "uploadDate": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "tags": { "type": "array" }
+      },
+      "required": ["id", "userId", "fileName", "fileSize", "uploadDate"]
+    },
+    "ChatConversation": {
+      "title": "ChatConversation",
+      "description": "Tigrinya AI chat conversation thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "title": { "type": "string" },
+        "messages": { "type": "array" },
+        "mode": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "createdAt"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Sovereign subscription and token refill payment receipt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "planId": { "type": "string" },
+        "amount": { "type": "string" },
+        "currency": { "type": "string" },
+        "bankName": { "type": "string" },
+        "referenceNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "referenceNumber", "status"]
+    },
+    "SubscriptionRecord": {
+      "title": "SubscriptionRecord",
+      "description": "Active user recurring subscription state and entitlement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "user_id": { "type": "string" },
+        "user_email": { "type": "string" },
+        "provider_customer_id": { "type": "string" },
+        "provider_subscription_id": { "type": "string" },
+        "plan": { "type": "string" },
+        "status": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "renewal_date": { "type": "string" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "user_id", "plan", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User account profiles, authority tiers, and storage quotas"
+    },
+    "/users/{userId}/files/{fileId}": {
+      "schema": "UserFile",
+      "description": "User private uploaded files and metadata storage"
+    },
+    "/users/{userId}/conversations/{conversationId}": {
+      "schema": "ChatConversation",
+      "description": "Tigrinya chat history per user"
+    },
+    "/userFiles/{fileId}": {
+      "schema": "UserFile",
+      "description": "Direct user files collection with security owner matching"
+    },
+    "/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Verified transaction and token refill records"
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": "SubscriptionRecord",
+      "description": "Active user subscription records"
+    }
+  }
+}

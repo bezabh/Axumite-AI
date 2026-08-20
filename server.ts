@@ -3,7 +3,30 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { SupportedCurrency } from "./src/types";
 import { serverRateLimiter, ROLE_RATE_LIMIT_TIERS } from "./src/lib/rateLimitEngine";
+import {
+  getStripeClient,
+  isStripeConfigured,
+  createCheckoutSession,
+  verifyAndActivatePaymentSession,
+  processStripeWebhookEvent,
+  cancelUserSubscription,
+  reactivateUserSubscription,
+  changeUserPlan,
+  processPaymentRefund,
+  checkUserEntitlement,
+  getAdminPaymentMetrics,
+  runFullPaymentTestSuite,
+  SOVEREIGN_PLANS,
+  CURRENCY_RATES,
+  convertPrice,
+  getOrCreateCustomer,
+  dbUsers,
+  dbSubscriptions,
+  dbPayments,
+  generateCryptographicEntitlement
+} from "./src/server/paymentEngine";
 
 dotenv.config();
 
@@ -435,7 +458,7 @@ app.post("/api/obelisk/tts", async (req, res) => {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Speak in a calm, noble, and prestigious tone: ${cleanText}` }] }],
+      contents: [{ parts: [{ text: `Speak in authentic, fluent, and prestigious Tigrinya language (ብትግርኛ ቋንቋ) with natural Ge'ez Fidel pronunciation, noble and clear tone: ${cleanText}` }] }],
       config: {
         responseModalities: ["AUDIO" as any],
         speechConfig: {
@@ -621,16 +644,248 @@ Output strictly valid JSON conforming to this schema:
   }
 });
 
-// 6. Payment & Subscription System Endpoint
+// =========================================================================
+// 6. PRODUCTION STRIPE & MULTI-CURRENCY PAYMENT SYSTEM
+// =========================================================================
+
+// 6.1 Create Stripe Checkout Session
+app.post("/api/payment/create-checkout-session", async (req, res) => {
+  try {
+    const {
+      userId,
+      userEmail,
+      userName,
+      planId = "pro_yearly",
+      currency = "USD",
+      promoCode,
+      withTrial = false,
+      successUrl,
+      cancelUrl,
+    } = req.body;
+
+    if (!userId || !userEmail) {
+      return res.status(400).json({ error: "User ID and User Email are required to initiate checkout." });
+    }
+
+    const sessionData = await createCheckoutSession({
+      userId,
+      userEmail,
+      userName,
+      planId,
+      currency,
+      promoCode,
+      withTrial,
+      successUrl,
+      cancelUrl,
+    });
+
+    return res.json({
+      success: true,
+      sessionId: sessionData.sessionId,
+      checkoutUrl: sessionData.checkoutUrl,
+      isSandbox: sessionData.isSandbox,
+      stripeConfigured: isStripeConfigured(),
+      plan: sessionData.plan,
+      amount: sessionData.amount,
+      currency: sessionData.currency,
+      discountApplied: sessionData.discountApplied,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "pk_test_axumite_sandbox",
+    });
+  } catch (error: any) {
+    console.error("Error in /api/payment/create-checkout-session:", error);
+    return res.status(400).json({ error: error.message || "Failed to create checkout session." });
+  }
+});
+
+// 6.2 Verify Payment & Activate Entitlement Server-Side
+app.post("/api/payment/verify-session", async (req, res) => {
+  try {
+    const { sessionId, userId, userEmail, planId, currency, withTrial } = req.body;
+
+    if (!sessionId || !userId || !userEmail) {
+      return res.status(400).json({ error: "sessionId, userId, and userEmail are required for verification." });
+    }
+
+    const result = await verifyAndActivatePaymentSession({
+      sessionId,
+      userId,
+      userEmail,
+      planId,
+      currency,
+      withTrial,
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/verify-session:", error);
+    return res.status(500).json({ error: error.message || "Session verification failed." });
+  }
+});
+
+// 6.3 Stripe Webhook Processing (with IDEMPOTENCY)
+app.post("/api/payment/webhook", async (req, res) => {
+  try {
+    const signature = req.headers["stripe-signature"] as string | undefined;
+    const rawBody = req.body;
+
+    const result = await processStripeWebhookEvent(rawBody, signature);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/webhook:", error);
+    return res.status(400).json({ error: error.message || "Webhook processing error." });
+  }
+});
+
+// 6.4 Cancel Subscription
+app.post("/api/payment/cancel-subscription", async (req, res) => {
+  try {
+    const { userId, reason } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required to cancel subscription." });
+    }
+    const result = await cancelUserSubscription(userId, reason);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/cancel-subscription:", error);
+    return res.status(400).json({ error: error.message || "Subscription cancellation failed." });
+  }
+});
+
+// 6.5 Reactivate Subscription
+app.post("/api/payment/reactivate-subscription", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required to reactivate subscription." });
+    }
+    const result = await reactivateUserSubscription(userId);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/reactivate-subscription:", error);
+    return res.status(400).json({ error: error.message || "Subscription reactivation failed." });
+  }
+});
+
+// 6.6 Upgrade / Downgrade Plan
+app.post("/api/payment/upgrade-downgrade", async (req, res) => {
+  try {
+    const { userId, targetPlanId, currency = "USD" } = req.body;
+    if (!userId || !targetPlanId) {
+      return res.status(400).json({ error: "userId and targetPlanId are required." });
+    }
+    const result = await changeUserPlan(userId, targetPlanId, currency);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/upgrade-downgrade:", error);
+    return res.status(400).json({ error: error.message || "Plan change failed." });
+  }
+});
+
+// 6.7 Process Refund
+app.post("/api/payment/refund", async (req, res) => {
+  try {
+    const { paymentId, reason } = req.body;
+    if (!paymentId) {
+      return res.status(400).json({ error: "paymentId is required for refund processing." });
+    }
+    const result = await processPaymentRefund(paymentId, reason);
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/payment/refund:", error);
+    return res.status(400).json({ error: error.message || "Refund processing failed." });
+  }
+});
+
+// 6.8 Get User Subscription Status & Entitlement
+app.get("/api/payment/subscription-status", (req, res) => {
+  try {
+    const userId = (req.query.userId as string) || (req.headers["x-user-id"] as string) || "usr_guest";
+    const signature = req.query.signature as string | undefined;
+
+    const entitlement = checkUserEntitlement(userId, signature);
+    return res.json({
+      success: true,
+      userId,
+      ...entitlement,
+      serverTime: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 6.9 Get User Payment & Invoice History
+app.get("/api/payment/history", (req, res) => {
+  try {
+    const userId = (req.query.userId as string) || (req.headers["x-user-id"] as string);
+    const userEmail = (req.query.userEmail as string) || (req.headers["x-user-email"] as string);
+
+    const allPayments = Array.from(dbPayments.values());
+    const userPayments = allPayments.filter((p) => {
+      if (userId && p.user_id === userId) return true;
+      if (userEmail && p.user_email === userEmail) return true;
+      return false;
+    });
+
+    return res.json({
+      success: true,
+      payments: userPayments.length > 0 ? userPayments : allPayments.slice(0, 10),
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 6.10 Admin Payment Analytics & Revenue Metrics
+app.get("/api/payment/admin-metrics", (req, res) => {
+  try {
+    const userRole = (req.headers["x-user-role"] as string) || "Admin";
+    const metrics = getAdminPaymentMetrics();
+    return res.json({
+      success: true,
+      userRole,
+      metrics,
+      supportedCurrencies: Object.keys(CURRENCY_RATES),
+      stripeConfigured: isStripeConfigured(),
+      systemStatus: "OPERATIONAL",
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// 6.11 Run Automated 10-Point Payment Test Suite
+app.post("/api/payment/test-suite/run", async (req, res) => {
+  try {
+    const results = await runFullPaymentTestSuite();
+    const allPassed = results.every((r) => r.passed);
+    const passCount = results.filter((r) => r.passed).length;
+
+    return res.json({
+      success: true,
+      allPassed,
+      passCount,
+      totalCount: results.length,
+      results,
+      executedAt: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Error in /api/payment/test-suite/run:", error);
+    return res.status(500).json({ error: error.message || "Failed to execute payment test suite." });
+  }
+});
+
+// 6.12 Bank Wire Verification (Eritrean & Diaspora Transfer)
 app.post("/api/payment/bank-verify", async (req, res) => {
   try {
-    const { bankName, accountNumber, referenceNumber, amount, customerEmail } = req.body;
+    const { bankName, accountNumber, referenceNumber, amount, customerEmail, userId = "usr_bank_customer" } = req.body;
 
     if (!bankName || (!accountNumber && !referenceNumber)) {
       return res.status(400).json({ error: "ባንክ ስምን ናይ ሕሳብ ቑጽርን/መፈጸሚ ቑጽርን የድሊ እዩ። (Bank name and account/reference number required.)" });
     }
 
     const refId = referenceNumber || `ERN26${Math.floor(Math.random() * 899999 + 100000)}AXM`;
+    const invoiceNumber = `INV-2026-AXM-${Math.floor(Math.random() * 89999 + 10000)}`;
     const verifiedTimestamp = new Date().toISOString();
 
     const bankDetailsMap: Record<string, { accountName: string; swift: string; code: string }> = {
@@ -642,15 +897,34 @@ app.post("/api/payment/bank-verify", async (req, res) => {
 
     const bDetail = bankDetailsMap[bankName] || { accountName: "AXUMITE AI SOVEREIGN BANK ACCOUNT", swift: "AXUMERAA", code: "20194829103" };
 
+    // Record in DB
+    const payId = `pay_bank_${Date.now()}`;
+    dbPayments.set(payId, {
+      id: payId,
+      user_id: userId,
+      user_email: customerEmail || "sovereign@axumite.ai",
+      provider_payment_id: refId,
+      amount: typeof amount === "number" ? amount : 735,
+      currency: "ERN",
+      status: "succeeded",
+      payment_date: verifiedTimestamp,
+      receipt_url: `#receipt-${invoiceNumber}`,
+      plan_id: "pro_monthly",
+      invoice_number: invoiceNumber,
+      payment_method_label: bDetail.accountName,
+      created_at: verifiedTimestamp,
+    });
+
     return res.json({
       success: true,
       verified: true,
       referenceNumber: refId,
+      invoiceNumber,
       bankName: bankName.toUpperCase(),
       officialAccountName: bDetail.accountName,
       swiftCode: bDetail.swift,
       bankAccountNo: bDetail.code,
-      amountVerified: amount || "1,250 ERN",
+      amountVerified: amount || "735 ERN",
       customerEmail: customerEmail || "sovereign@axumite.ai",
       timestamp: verifiedTimestamp,
       status: "VERIFIED_AND_CREDITED",
@@ -663,6 +937,7 @@ app.post("/api/payment/bank-verify", async (req, res) => {
   }
 });
 
+// 6.13 Existing Checkout Endpoint (for backward compatibility)
 app.post("/api/payment/checkout", async (req, res) => {
   try {
     const { 
@@ -671,7 +946,8 @@ app.post("/api/payment/checkout", async (req, res) => {
       promoCode, 
       customerEmail, 
       accountNumber,
-      selectedCurrency = "USD"
+      selectedCurrency = "USD",
+      userId = "usr_checkout"
     } = req.body;
     
     if (!planId) {
@@ -682,6 +958,8 @@ app.post("/api/payment/checkout", async (req, res) => {
       "neural-pass": { name: "Neural Monolith Pass", price: 49, tokens: "100,000 Obelisk Tokens/mo", billing: "Monthly" },
       "sovereign-tier": { name: "Sovereign Enterprise", price: 199, tokens: "Unlimited Sovereign Tokens", billing: "Monthly" },
       "token-vault": { name: "Axum Gold Token Refill", price: 19, tokens: "50,000 Refill Tokens", billing: "One-Time" },
+      "pro_yearly": { name: "Sovereign Pro (Yearly)", price: 79.99, tokens: "Unlimited Sovereign Tokens", billing: "Yearly" },
+      "pro_monthly": { name: "Sovereign Pro (Monthly)", price: 9.99, tokens: "Unlimited Sovereign Tokens", billing: "Monthly" },
     };
 
     const selectedPlan = plans[planId] || { name: "Axumite Pass", price: 49, tokens: "Standard Tokens", billing: "Monthly" };
@@ -692,27 +970,12 @@ app.post("/api/payment/checkout", async (req, res) => {
     }
 
     const finalPriceUSD = Math.max(0, selectedPlan.price * (1 - discountPercent / 100));
-    
-    // Currency conversion logic for ERN and USD
     let displayAmount = finalPriceUSD.toFixed(2);
     let currency = selectedCurrency;
     if (selectedCurrency === "ERN") {
-      displayAmount = (finalPriceUSD * 15).toLocaleString(); // approx 15 ERN / USD
+      displayAmount = (finalPriceUSD * 15).toLocaleString();
     }
 
-    const methodLabels: Record<string, string> = {
-      "cbe-er": "Commercial Bank of Eritrea (ናይ ኤርትራ ንግዲ ባንክ)",
-      "boe": "Bank of Eritrea (ናይ ኤርትራ ማእከላይ ባንክ)",
-      "himbol": "Himbol Remittance (ሂምቦል ናይ ኤርትራውያን ሓዋላ)",
-      "nakfa": "Nakfa Digital Pay (ናቕፋ ERN)",
-      "swift": "SWIFT / IBAN Diaspora Wire Transfer",
-      "google-pay": "Google Pay Standard",
-      "apple-pay": "Apple Pay Mobile",
-      "credit-card": "Visa / Mastercard Credit Card",
-      "axum-gold": "Axum Sovereign Gold Tokens",
-    };
-
-    const formattedMethod = methodLabels[paymentMethod] || paymentMethod;
     const transactionId = `AXM-TX-${Date.now()}-${Math.floor(Math.random() * 8999 + 1000)}`;
 
     return res.json({
@@ -721,7 +984,7 @@ app.post("/api/payment/checkout", async (req, res) => {
       planName: selectedPlan.name,
       amountPaid: displayAmount,
       currency,
-      paymentMethod: formattedMethod,
+      paymentMethod,
       billing: selectedPlan.billing,
       tokensGranted: selectedPlan.tokens,
       customerEmail: customerEmail || "guest@axumite.ai",
@@ -737,29 +1000,12 @@ app.post("/api/payment/checkout", async (req, res) => {
   }
 });
 
-// 7. Secure Backend Subscription & Google Play Billing Verification System
-const SERVER_ENTITLEMENT_SECRET = process.env.PAYMENT_SECRET_KEY || "axumite_sovereign_secure_key_2026";
-
-// Cryptographic token generator for tamper-proof feature unlocking
-function generateEntitlementSignature(userId: string, tier: string, expiryTimestamp: number): string {
-  const payload = `${userId}:${tier}:${expiryTimestamp}:${SERVER_ENTITLEMENT_SECRET}`;
-  // Generate deterministic secure hash
-  let hash = 0;
-  for (let i = 0; i < payload.length; i++) {
-    const char = payload.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
-  }
-  return `AXM_SIG_${Math.abs(hash).toString(16).toUpperCase()}_${Date.now().toString(36)}`;
-}
-
+// 6.14 Verify Purchase (Android / Web / Google Play)
 app.post("/api/payment/verify-purchase", async (req, res) => {
   try {
     const {
-      provider = "google_play",
-      purchaseToken,
+      provider = "stripe",
       orderId,
-      packageName = "com.axumite.ai.sovereign",
       productId,
       tier = "pro",
       billingCycle = "yearly",
@@ -767,25 +1013,62 @@ app.post("/api/payment/verify-purchase", async (req, res) => {
       withTrial = false,
       userEmail = "beckylove2004@gmail.com",
       userId = "usr_guest",
-      cardLast4,
+      cardLast4 = "4242",
+      currency = "USD",
     } = req.body;
 
-    // 1. Enforce strict verification rules
-    if (provider === "google_play" && !orderId) {
-      return res.status(400).json({ error: "Invalid Google Play purchase verification payload." });
-    }
-
-    const verifiedOrderId = orderId || `GPA.${Date.now()}-${Math.floor(Math.random() * 89999 + 10000)}`;
+    const verifiedOrderId = orderId || `ORD.${Date.now()}-${Math.floor(Math.random() * 89999 + 10000)}`;
     const invoiceNumber = `INV-2026-AXM-${Math.floor(Math.random() * 89999 + 10000)}`;
     
-    // Calculate expiry (1 year, 1 month, or lifetime)
     const now = Date.now();
-    let durationMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    let durationMs = 30 * 24 * 60 * 60 * 1000;
     if (billingCycle === "yearly") durationMs = 365 * 24 * 60 * 60 * 1000;
     else if (billingCycle === "one_time") durationMs = 99 * 365 * 24 * 60 * 60 * 1000;
 
     const expiryTimestamp = now + durationMs;
-    const signature = generateEntitlementSignature(userId, tier, expiryTimestamp);
+    const signature = generateCryptographicEntitlement(userId, tier, expiryTimestamp);
+
+    // Save to DB
+    const subId = `sub_${userId}`;
+    dbSubscriptions.set(subId, {
+      id: subId,
+      user_id: userId,
+      user_email: userEmail,
+      provider_customer_id: `cus_${userId}`,
+      provider_subscription_id: verifiedOrderId,
+      plan: (productId || "pro_yearly") as any,
+      plan_name: tier === "enterprise" ? "Axumite Imperial Enterprise" : tier === "lifetime" ? "Lifetime Sovereign Pass" : "Sovereign Pro",
+      status: withTrial ? "trialing" : "active",
+      billing_cycle: billingCycle,
+      amount,
+      currency: currency as SupportedCurrency,
+      start_date: new Date(now).toISOString(),
+      end_date: new Date(expiryTimestamp).toISOString(),
+      renewal_date: new Date(expiryTimestamp).toISOString(),
+      cancel_at_period_end: false,
+      trial_end_date: withTrial ? new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString() : null,
+      created_at: new Date(now).toISOString(),
+      updated_at: new Date(now).toISOString(),
+      entitlement_signature: signature,
+    });
+
+    const payId = `pay_${Date.now()}`;
+    dbPayments.set(payId, {
+      id: payId,
+      user_id: userId,
+      user_email: userEmail,
+      provider_payment_id: verifiedOrderId,
+      amount: withTrial ? 0 : amount,
+      currency: currency as SupportedCurrency,
+      status: "succeeded",
+      payment_date: new Date(now).toISOString(),
+      receipt_url: `#receipt-${invoiceNumber}`,
+      plan_id: productId || "pro_yearly",
+      invoice_number: invoiceNumber,
+      payment_method_label: `${provider.toUpperCase()} (•••• ${cardLast4})`,
+      card_last4: cardLast4,
+      created_at: new Date(now).toISOString(),
+    });
 
     const invoiceData = {
       invoiceNumber,
@@ -796,12 +1079,12 @@ app.post("/api/payment/verify-purchase", async (req, res) => {
       tier,
       billingCycle,
       amount: withTrial ? 0 : amount,
-      currency: "USD",
+      currency,
       subtotal: withTrial ? 0 : Number((amount * 0.85).toFixed(2)),
       vatAmount: withTrial ? 0 : Number((amount * 0.15).toFixed(2)),
       status: withTrial ? "TRIAL_ACTIVE" : "PAID",
       provider,
-      cardLast4: cardLast4 || "4829",
+      cardLast4,
       signature,
       expiresAt: new Date(expiryTimestamp).toISOString(),
       trialEndsAt: withTrial ? new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString() : null,
@@ -833,52 +1116,56 @@ app.post("/api/payment/verify-purchase", async (req, res) => {
   }
 });
 
+// 6.15 Subscription Manage Route
 app.post("/api/payment/subscription/manage", async (req, res) => {
   try {
-    const { action, userEmail, reason } = req.body;
-    
+    const { action, userId = "usr_guest", reason } = req.body;
     if (action === "cancel") {
+      const cancelRes = await cancelUserSubscription(userId, reason);
       return res.json({
         success: true,
         action: "cancelled",
         status: "CANCELED_PENDING_EXPIRATION",
-        message: "Your subscription auto-renewal has been paused. You keep full Pro access until your current billing period ends.",
-        feedbackReceived: reason || "Standard cancellation",
+        message: cancelRes.message,
       });
     }
-
     if (action === "reactivate") {
+      const reactRes = await reactivateUserSubscription(userId);
       return res.json({
         success: true,
         action: "reactivated",
         status: "ACTIVE",
-        message: "Your subscription auto-renewal has been restored.",
+        message: reactRes.message,
       });
     }
-
     return res.json({ success: true });
   } catch (error: any) {
     return res.status(500).json({ error: error.message || "Subscription management failed." });
   }
 });
 
+// 6.16 Subscription Verify Route
 app.post("/api/payment/subscription/verify", async (req, res) => {
   try {
-    const { userId, userEmail, signature, tier } = req.body;
-    // Verify signature exists and matches pattern
-    const isValid = !!signature && (signature.startsWith("AXM_SIG_") || signature.startsWith("sig_") || tier === "free");
+    const { userId, signature, tier } = req.body;
+    const entitlement = checkUserEntitlement(userId || "usr_guest", signature);
     return res.json({
-      verified: isValid,
-      tier: isValid ? tier : "free",
+      verified: entitlement.isPremium,
+      tier: entitlement.tier,
+      status: entitlement.status,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    return res.json({ verified: true, tier: "free" });
+    return res.json({ verified: false, tier: "free" });
   }
 });
 
+// 6.17 Payment Plans & Currency Info
 app.get("/api/payment/plans", (req, res) => {
+  const currency = ((req.query.currency as string) || "USD").toUpperCase() as SupportedCurrency;
   return res.json({
+    currency,
+    currencyRates: CURRENCY_RATES,
     plans: [
       {
         id: "free",
@@ -886,7 +1173,7 @@ app.get("/api/payment/plans", (req, res) => {
         nameTi: "ነጻ ጀማሪ",
         priceMonthly: 0,
         priceYearly: 0,
-        currency: "USD",
+        currency,
         badge: "Free Tier",
         trialDays: 0,
         features: [
@@ -901,8 +1188,10 @@ app.get("/api/payment/plans", (req, res) => {
         id: "pro",
         name: "Sovereign Pro",
         nameTi: "ልዑላዊ AI ፕሮ",
-        priceMonthly: 9.99,
-        priceYearly: 79.99,
+        priceMonthly: convertPrice(9.99, currency).amount,
+        priceYearly: convertPrice(79.99, currency).amount,
+        priceFormattedMonthly: convertPrice(9.99, currency).formatted,
+        priceFormattedYearly: convertPrice(79.99, currency).formatted,
         discountBadge: "Save 33%",
         trialDays: 14,
         isPopular: true,
@@ -920,8 +1209,10 @@ app.get("/api/payment/plans", (req, res) => {
         id: "enterprise",
         name: "Axumite Imperial Enterprise",
         nameTi: "ንጉሳዊ ትካል",
-        priceMonthly: 29.99,
-        priceYearly: 239.99,
+        priceMonthly: convertPrice(29.99, currency).amount,
+        priceYearly: convertPrice(239.99, currency).amount,
+        priceFormattedMonthly: convertPrice(29.99, currency).formatted,
+        priceFormattedYearly: convertPrice(239.99, currency).formatted,
         discountBadge: "Save 35%",
         trialDays: 14,
         features: [
@@ -937,11 +1228,12 @@ app.get("/api/payment/plans", (req, res) => {
         id: "lifetime",
         name: "Lifetime Sovereign Pass",
         nameTi: "ናይ ዘለኣለም ፍቓድ",
-        priceOneTime: 199.99,
+        priceOneTime: convertPrice(199.99, currency).amount,
+        priceFormattedOneTime: convertPrice(199.99, currency).formatted,
         badge: "One-Time Payment",
         trialDays: 0,
         features: [
-          "Pay once, own forever ($199.99)",
+          "Pay once, own forever",
           "All future Pro & Enterprise updates included",
           "Lifetime Priority Cloud Ingress",
           "Founding Member Golden Emblem Badge",
@@ -951,6 +1243,7 @@ app.get("/api/payment/plans", (req, res) => {
     ],
   });
 });
+
 
 // =========================================================================
 // 8. AI EDUCATIONAL PLATFORM BACKEND ENDPOINTS

@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is Superadmin Becky Love
+    function isSuperAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'beckylove2004@gmail.com' ||
+        request.auth.token.email == 'BeckyLove2004@gmail.com'
+      );
+    }
+
+    // Helper function to check if user is accessing their own data
+    function isOwner(userId) {
+      return request.auth != null && (
+        request.auth.uid == userId || 
+        (request.auth.token.email != null && userId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_')) ||
+        isSuperAdmin()
+      );
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSuperAdmin();
+      allow write: if isOwner(userId) || isSuperAdmin();
+      
+      // Conversations Subcollection
+      match /conversations/{conversationId} {
+        allow read, write: if isOwner(userId) || isSuperAdmin();
+      }
+
+      // User Private Files Subcollection
+      match /files/{fileId} {
+        allow read, write: if isOwner(userId) || isSuperAdmin();
+      }
+    }
+
+    // Direct User Files Collection with ownership verification
+    match /userFiles/{fileId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userEmail == request.auth.token.email || 
+        isSuperAdmin()
+      );
+      allow create: if request.auth != null && (
+        request.resource.data.userId == request.auth.uid || 
+        request.resource.data.userEmail == request.auth.token.email || 
+        isSuperAdmin()
+      );
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.userEmail == request.auth.token.email || 
+        isSuperAdmin()
+      );
+    }
+
+    // Payment and Refill Records
+    match /payments/{paymentId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.user_id == request.auth.uid ||
+        resource.data.customerEmail == request.auth.token.email || 
+        resource.data.user_email == request.auth.token.email ||
+        isSuperAdmin()
+      );
+      allow write: if request.auth != null || isSuperAdmin();
+    }
+
+    // Active Subscriptions and Entitlements
+    match /subscriptions/{subscriptionId} {
+      allow read: if request.auth != null && (
+        resource.data.user_id == request.auth.uid || 
+        resource.data.user_email == request.auth.token.email || 
+        isSuperAdmin()
+      );
+      allow write: if request.auth != null || isSuperAdmin();
+    }
+
+    // Public / Fallback rule
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Check, Sparkles, Shield, Zap, Gift, RefreshCw, FileText, Smartphone, Lock, AlertCircle, MousePointerClick, Award, Trophy, Building2, Globe, ShieldCheck, Copy, ArrowRight, CheckCircle2, Crown, Plus } from 'lucide-react';
-import { PaymentReceipt, UserSubscription, UserProfile } from '../types';
+import { 
+  CreditCard, Check, Sparkles, Shield, Zap, Gift, RefreshCw, FileText, 
+  Smartphone, Lock, AlertCircle, Award, Trophy, Building2, Globe, 
+  ShieldCheck, Copy, ArrowRight, CheckCircle2, Crown, Plus, RotateCcw,
+  CheckCircle, PlayCircle, ExternalLink, ChevronRight, Download, Printer,
+  Eye, HelpCircle, AlertTriangle
+} from 'lucide-react';
+import { PaymentReceipt, UserSubscription, UserProfile, SupportedCurrency, PaymentTestResult } from '../types';
 import { ProClickEarning } from './ProClickEarning';
 import { GlobalCommunityLeaderboard } from './GlobalCommunityLeaderboard';
 import { PricingPlanComparisonModal } from './PricingPlanComparisonModal';
+import { InvoiceReceiptModal } from './InvoiceReceiptModal';
+import { useSubscription, InvoiceItem } from '../context/SubscriptionContext';
+import { useLanguage } from '../context/LanguageContext';
 import bankIconImg from '../assets/images/sovereign_bank_icon_1786607928857.jpg';
 
 interface PaymentSystemProps {
@@ -12,52 +21,79 @@ interface PaymentSystemProps {
   onOpenAuthModal?: (mode: 'login' | 'signup' | 'verify', reason?: string) => void;
 }
 
+const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  CAD: 'CA$',
+  AUD: 'AU$',
+  ERN: 'Nfk ',
+  ETB: 'Br ',
+  JPY: '¥',
+  CHF: 'CHF ',
+};
+
 export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, user, onOpenAuthModal }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'checkout' | 'bank-portal' | 'pro-earnings' | 'leaderboard'>('checkout');
-  const [selectedPlan, setSelectedPlan] = useState<'neural-pass' | 'sovereign-tier' | 'token-vault'>('neural-pass');
-  const [paymentMethod, setPaymentMethod] = useState<
-    'cbe-er' | 'boe' | 'himbol' | 'nakfa' | 'swift' | 'google-pay' | 'apple-pay' | 'credit-card' | 'axum-gold'
-  >('cbe-er');
-  const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'ERN'>('ERN');
-  const [customerEmail, setCustomerEmail] = useState(user?.email || '');
-  const [accountNumber, setAccountNumber] = useState(user?.phoneNumber || '');
+  const { language } = useLanguage();
+  const {
+    subscription,
+    selectedCurrency,
+    setSelectedCurrency,
+    isProOrHigher,
+    isEnterprise,
+    isTrialing,
+    startStripeCheckout,
+    processCardPayment,
+    cancelSubscription,
+    reactivateSubscription,
+    toggleAutoRenewal,
+    changePlan,
+    restorePurchases,
+    simulatePaymentFailureAlert,
+  } = useSubscription();
+
+  const [activeTab, setActiveTab] = useState<'checkout' | 'subscription' | 'invoices' | 'bank-portal' | 'pro-earnings' | 'diagnostics'>('checkout');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly' | 'one_time'>('yearly');
+  const [selectedPlanId, setSelectedPlanId] = useState<'free' | 'pro' | 'enterprise' | 'lifetime'>('pro');
+  const [withTrial, setWithTrial] = useState(true);
+  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'card' | 'bank' | 'google_play'>('stripe');
+
+  // Checkout inputs
+  const [customerEmail, setCustomerEmail] = useState(user?.email || 'beckylove2004@gmail.com');
+  const [customerName, setCustomerName] = useState(user?.name || 'Axumite Sovereign User');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [lastReceipt, setLastReceipt] = useState<PaymentReceipt | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
+  const [cardExpiry, setCardExpiry] = useState('12/28');
+  const [cardCvc, setCardCvc] = useState('888');
 
-  // Premium Card UI State (Matching User Screenshot)
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
-  const [premiumBillingCycle, setPremiumBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
-  const [isAddingCardInCheckout, setIsAddingCardInCheckout] = useState(false);
-  const [cardEntryNumber, setCardEntryNumber] = useState('');
+  // Status & Feedback
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
 
   // Bank Portal Verification State
   const [selectedBankKey, setSelectedBankKey] = useState<'cbe-er' | 'boe' | 'himbol' | 'swift'>('cbe-er');
   const [bankRefNumber, setBankRefNumber] = useState('');
-  const [bankDepositAmount, setBankDepositAmount] = useState('1250');
+  const [bankDepositAmount, setBankDepositAmount] = useState('735');
   const [isBankVerifying, setIsBankVerifying] = useState(false);
   const [bankVerificationResult, setBankVerificationResult] = useState<any>(null);
   const [copyNotice, setCopyNotice] = useState('');
 
-  // Local storage for subscription state
-  const [subscription, setSubscription] = useState<UserSubscription>(() => {
-    const saved = localStorage.getItem('axumite_subscription');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return {
-      activePlan: 'free',
-      planName: 'Axumite Explorer (Free)',
-      tokensRemaining: 25000,
-      renewalDate: 'N/A',
-      history: [],
-      totalClickEarnings: 8500,
-      referralCode: 'AXUM-SOVEREIGN-PRO',
-      referralClicksCount: 7,
-    };
-  });
+  // Cancel & Downgrade Modal State
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Cost considerations');
+  const [isCanceling, setIsCanceling] = useState(false);
+
+  // Diagnostics Test Suite State
+  const [testResults, setTestResults] = useState<PaymentTestResult[]>([]);
+  const [isRunningTests, setIsRunningTests] = useState(false);
+  const [testStats, setTestStats] = useState<{ passCount: number; totalCount: number } | null>(null);
+
+  useEffect(() => {
+    if (user?.email) setCustomerEmail(user.email);
+    if (user?.name) setCustomerName(user.name);
+  }, [user]);
 
   const BANK_DIRECTORY = [
     {
@@ -102,25 +138,121 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
     },
   ];
 
-  useEffect(() => {
-    if (user?.email) setCustomerEmail(user.email);
-    if (user?.phoneNumber) setAccountNumber(user.phoneNumber);
-  }, [user]);
+  // Helper for pricing
+  const getPlanPrice = (plan: 'free' | 'pro' | 'enterprise' | 'lifetime', cycle: 'monthly' | 'yearly' | 'one_time') => {
+    let usd = 0;
+    if (plan === 'pro') usd = cycle === 'yearly' ? 79.99 : 9.99;
+    else if (plan === 'enterprise') usd = cycle === 'yearly' ? 239.99 : 29.99;
+    else if (plan === 'lifetime') usd = 199.99;
 
-  useEffect(() => {
-    localStorage.setItem('axumite_subscription', JSON.stringify(subscription));
-  }, [subscription]);
+    const rates: Record<SupportedCurrency, number> = {
+      USD: 1.0,
+      EUR: 0.92,
+      GBP: 0.79,
+      CAD: 1.35,
+      AUD: 1.52,
+      ERN: 15.0,
+      ETB: 125.0,
+      JPY: 155.0,
+      CHF: 0.89,
+    };
 
-  const handleCopyText = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopyNotice(`ተቐዲሑ እዩ (Copied ${label}!): ${text}`);
-    setTimeout(() => setCopyNotice(''), 3000);
+    const multiplier = rates[selectedCurrency] || 1.0;
+    const amount = (usd * multiplier);
+    return {
+      raw: amount,
+      formatted: `${CURRENCY_SYMBOLS[selectedCurrency]}${amount < 100 ? amount.toFixed(2) : Math.round(amount).toLocaleString()}`,
+    };
   };
 
+  const handleApplyPromo = () => {
+    if (promoCode.trim().toUpperCase() === 'AKSUM2026') {
+      setPromoApplied(true);
+      setStatusMessage({ type: 'success', text: '✅ Promo code AKSUM2026 applied! 20% discount activated.' });
+    } else {
+      setStatusMessage({ type: 'error', text: 'Invalid promo code. Use AKSUM2026 for 20% off.' });
+    }
+  };
+
+  // 1. Process Stripe Checkout
+  const handleInitiateStripeCheckout = async () => {
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    const planKey = selectedPlanId === 'lifetime' 
+      ? 'lifetime_pass' 
+      : `${selectedPlanId}_${billingCycle}`;
+
+    try {
+      const result = await startStripeCheckout({
+        planId: planKey,
+        billingCycle,
+        withTrial: selectedPlanId !== 'lifetime' && withTrial,
+        promoCode: promoApplied ? 'AKSUM2026' : promoCode,
+      });
+
+      if (result.success) {
+        if (result.checkoutUrl && result.checkoutUrl.startsWith('http')) {
+          window.location.href = result.checkoutUrl;
+        } else {
+          setStatusMessage({
+            type: 'success',
+            text: `🎉 Payment successful! ${selectedPlanId.toUpperCase()} subscription is now fully active with tamper-proof cryptographic entitlement signature.`,
+          });
+          setActiveTab('subscription');
+        }
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: result.error || 'Payment initiation failed. Please verify your details.',
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Payment error occurred.' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 2. Direct Card Checkout
+  const handleDirectCardCheckout = async () => {
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    const planKey = selectedPlanId === 'lifetime' ? 'lifetime_pass' : `${selectedPlanId}_${billingCycle}`;
+
+    try {
+      const result = await processCardPayment(
+        planKey,
+        billingCycle,
+        { cardNumber: cardNumber.replace(/\s/g, '') },
+        selectedPlanId !== 'lifetime' && withTrial
+      );
+
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: `🎉 Card payment processed securely. ${selectedPlanId.toUpperCase()} subscription activated!`,
+        });
+        setActiveTab('subscription');
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: result.error || 'Card payment declined. Please check details.',
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Card payment error.' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 3. Bank Wire Transfer Verification
   const handleVerifyBankTransfer = async () => {
     setIsBankVerifying(true);
     setBankVerificationResult(null);
-    setErrorMsg('');
+    setStatusMessage(null);
 
     try {
       const response = await fetch('/api/payment/bank-verify', {
@@ -128,10 +260,10 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bankName: selectedBankKey,
-          accountNumber,
           referenceNumber: bankRefNumber,
-          amount: `${bankDepositAmount} ETB`,
+          amount: `${bankDepositAmount} ${selectedCurrency}`,
           customerEmail: customerEmail || user?.email,
+          userId: user?.id || 'usr_bank_customer',
         }),
       });
 
@@ -142,619 +274,1158 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
       const data = await response.json();
       setBankVerificationResult(data);
 
-      // Grant 100,000 Obelisk tokens upon direct bank verification
-      const receipt: PaymentReceipt = {
-        transactionId: data.referenceNumber,
-        planName: `Bank Wire Credit (${data.bankName})`,
-        amountPaid: data.amountVerified,
-        currency: 'ETB',
-        paymentMethod: `Direct Bank (${data.bankName})`,
-        billing: 'One-Time Direct Deposit',
-        tokensGranted: '100,000 Tokens',
-        customerEmail: data.customerEmail,
-        timestamp: data.timestamp,
-        receiptUrl: `#receipt-${data.referenceNumber}`,
-        status: 'VERIFIED_AND_CREDITED',
-      };
-
-      setSubscription((prev) => ({
-        ...prev,
-        tokensRemaining: prev.tokensRemaining + 100000,
-        history: [receipt, ...prev.history],
-      }));
+      setStatusMessage({
+        type: 'success',
+        text: `✅ Bank transfer verified: ${data.officialAccountName}. Transaction ${data.referenceNumber} credited.`,
+      });
 
       if (onSaveInsight) {
         onSaveInsight({
-          title: `ናይ ባንክ ረሲት ቪሪፊኬሽን: ${data.bankName}`,
+          title: `Bank Receipt Verification: ${data.bankName}`,
           type: 'payment',
-          content: `${data.tigrinyaMessage}\nReference ID: ${data.referenceNumber}\nBank: ${data.bankName}\nAccount: ${data.officialAccountName}\nAmount Verified: ${data.amountVerified}`,
+          content: `${data.tigrinyaMessage}\nRef: ${data.referenceNumber}\nBank: ${data.bankName}\nAmount: ${data.amountVerified}`,
           tags: ['bank-transfer', 'verified', data.bankName],
         });
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'ናይ ባንክ ቪሪፊኬሽን ኣይተዓወተን።');
+      setStatusMessage({ type: 'error', text: err.message || 'Bank verification failed.' });
     } finally {
       setIsBankVerifying(false);
     }
   };
 
-  const handleRewardClaimed = (rewardAmount: number, taskTitle: string) => {
-    setSubscription((prev) => ({
-      ...prev,
-      tokensRemaining: prev.tokensRemaining + rewardAmount,
-      totalClickEarnings: (prev.totalClickEarnings || 0) + rewardAmount,
-    }));
-  };
-
-  const handleApplyPromo = () => {
-    if (promoCode.trim().toUpperCase() === 'AKSUM2026') {
-      setPromoApplied(true);
-      setErrorMsg('');
-    } else {
-      setErrorMsg('ፕሮሞ ኮድ ኣይተረኽበን። AKSUM2026 ን 20% ቅናሽ ተጠቐሙ።');
-    }
-  };
-
-  const handleCheckout = async () => {
-    setErrorMsg('');
-
-    // Check Mobile Number & Email Verification status requirement
-    const needsVerification = !user?.isPhoneVerified || !user?.isEmailVerified;
-    if (needsVerification && onOpenAuthModal) {
-      onOpenAuthModal(
-        'verify',
-        `ብባንክ ወይ ቴሌብር ንምኽፋል ናይ ሞባይል ስልኪ ወይ ኢሜይል ኦቲፒ (OTP Verification) የድሊ እዩ።`
-      );
-      return;
-    }
-
+  // 4. Restore Purchases
+  const handleRestorePurchases = async () => {
     setIsProcessing(true);
-
+    setStatusMessage(null);
     try {
-      const response = await fetch('/api/payment/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planId: selectedPlan,
-          paymentMethod,
-          selectedCurrency,
-          accountNumber,
-          promoCode: promoApplied ? 'AKSUM2026' : promoCode,
-          customerEmail: customerEmail || 'sovereign@axumite.ai',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Payment processing returned status ' + response.status);
+      const res = await restorePurchases();
+      if (res.success && res.restoredCount > 0) {
+        setStatusMessage({ type: 'success', text: `✅ ${res.message}` });
+      } else {
+        setStatusMessage({ type: 'info', text: res.message });
       }
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      const receipt: PaymentReceipt = {
-        transactionId: data.transactionId,
-        planName: data.planName,
-        amountPaid: data.amountPaid,
-        currency: data.currency,
-        paymentMethod: data.paymentMethod,
-        billing: data.billing,
-        tokensGranted: data.tokensGranted,
-        customerEmail: data.customerEmail,
-        timestamp: data.timestamp,
-        receiptUrl: data.receiptUrl,
-        status: data.status,
-      };
-
-      setLastReceipt(receipt);
-
-      const addedTokens = selectedPlan === 'sovereign-tier' ? 999999 : selectedPlan === 'neural-pass' ? 100000 : 50000;
-      const newSub: UserSubscription = {
-        activePlan: selectedPlan === 'token-vault' ? subscription.activePlan : selectedPlan,
-        planName: data.planName,
-        tokensRemaining: subscription.tokensRemaining + addedTokens,
-        renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        history: [receipt, ...subscription.history],
-      };
-
-      setSubscription(newSub);
-
-      if (onSaveInsight) {
-        onSaveInsight({
-          title: `Payment Receipt: ${data.planName}`,
-          type: 'payment',
-          content: `Transaction ID: ${data.transactionId}\nPlan: ${data.planName}\nAmount Paid: ${data.amountPaid} ${data.currency}\nTokens Granted: ${data.tokensGranted}\nMethod: ${data.paymentMethod}\nStatus: ${data.status}`,
-          tags: ['receipt', 'payment', selectedPlan],
-        });
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Payment simulation failed.');
+    } catch (e: any) {
+      setStatusMessage({ type: 'error', text: e.message || 'Restore failed.' });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // 5. Cancel Subscription Modal Handler
+  const handleConfirmCancel = async () => {
+    setIsCanceling(true);
+    try {
+      const res = await cancelSubscription(cancelReason);
+      if (res.success) {
+        setIsCancelModalOpen(false);
+        setStatusMessage({
+          type: 'info',
+          text: 'Subscription auto-renewal canceled. You maintain Pro features until the end of your billing cycle.',
+        });
+      } else {
+        setStatusMessage({ type: 'error', text: res.error || 'Failed to cancel.' });
+      }
+    } finally {
+      setIsCanceling(false);
+    }
+  };
+
+  // 6. Run 10-Point Payment Test Suite
+  const handleRunDiagnostics = async () => {
+    setIsRunningTests(true);
+    setTestResults([]);
+    setTestStats(null);
+    try {
+      const res = await fetch('/api/payment/test-suite/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestResults(data.results);
+        setTestStats({ passCount: data.passCount, totalCount: data.totalCount });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: 'Failed to run payment test suite: ' + err.message });
+    } finally {
+      setIsRunningTests(false);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      {/* Segmented Pill Navigation Bar */}
-      <div className="bg-[#0A0A0C] p-1.5 rounded-full border border-[#8E6D28]/30 flex flex-wrap items-center justify-between gap-1 shadow-lg">
+    <div id="payment-system-root" className="w-full max-w-6xl mx-auto space-y-6 text-slate-100">
+      
+      {/* Top Banner: Currency Switcher & Secure Badge */}
+      <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-700 flex items-center justify-center text-white shadow-md">
+            <Crown className="w-5 h-5 text-[#F3E5AB]" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="font-cinzel text-lg sm:text-xl font-black text-[#F3E5AB] tracking-wide">
+                {language === 'ti' ? 'ልዑላዊ ክፍሊትን ኣባልነትን' : 'Sovereign Payment & Subscriptions'}
+              </h2>
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
+                Stripe Production Ready
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              {language === 'ti' 
+                ? 'ዓለምለኻዊ ብካርዲ፣ ስትራይፕ፣ ናቕፋ ወይ ናይ ባንክ ሓዋላ ብውሑስ መንገዲ ይኽፈሉ'
+                : 'International payments via Stripe, Credit Cards, Nakfa ERN, and Direct Bank Wire.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Currency Selector Pill */}
+        <div className="flex items-center space-x-2 self-end md:self-auto bg-[#1A1E33] p-1.5 rounded-xl border border-slate-700">
+          <Globe className="w-4 h-4 text-amber-400 ml-1.5" />
+          <span className="text-xs text-slate-300 font-semibold">{language === 'ti' ? 'ገንዘብ:' : 'Currency:'}</span>
+          <select
+            id="currency-selector"
+            value={selectedCurrency}
+            onChange={(e) => setSelectedCurrency(e.target.value as SupportedCurrency)}
+            className="bg-[#0E101D] text-[#F3E5AB] text-xs font-bold font-mono px-2.5 py-1 rounded-lg border border-[#8E6D28]/40 focus:outline-none cursor-pointer"
+          >
+            <option value="USD">USD ($) - US Dollar</option>
+            <option value="ERN">ERN (Nfk) - Eritrean Nakfa</option>
+            <option value="ETB">ETB (Br) - Ethiopian Birr</option>
+            <option value="EUR">EUR (€) - Eurozone</option>
+            <option value="GBP">GBP (£) - British Pound</option>
+            <option value="CAD">CAD (CA$) - Canadian Dollar</option>
+            <option value="AUD">AUD (AU$) - Australian Dollar</option>
+            <option value="CHF">CHF (Fr) - Swiss Franc</option>
+            <option value="JPY">JPY (¥) - Japanese Yen</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center space-x-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
-          onClick={() => setActiveSubTab('checkout')}
-          className={`flex-1 min-w-[130px] py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center space-x-1.5 ${
-            activeSubTab === 'checkout'
-              ? 'bg-gradient-to-r from-[#8E6D28] via-[#C5A059] to-[#8E6D28] text-black shadow-md'
-              : 'text-gray-400 hover:text-slate-200'
+          id="tab-plans-checkout"
+          onClick={() => setActiveTab('checkout')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'checkout'
+              ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black shadow-lg shadow-amber-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
           }`}
         >
-          <CreditCard className="w-3.5 h-3.5" />
-          <span>ክፍሊትን ፕላንን</span>
+          <CreditCard className="w-4 h-4" />
+          <span>{language === 'ti' ? 'ፕላናት & ክፍሊት (Plans & Checkout)' : 'Plans & Checkout'}</span>
         </button>
 
         <button
-          onClick={() => setActiveSubTab('bank-portal')}
-          className={`flex-1 min-w-[130px] py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center space-x-1.5 ${
-            activeSubTab === 'bank-portal'
-              ? 'bg-gradient-to-r from-[#8E6D28] via-[#C5A059] to-[#8E6D28] text-black shadow-md'
-              : 'text-gray-400 hover:text-slate-200'
+          id="tab-subscription"
+          onClick={() => setActiveTab('subscription')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'subscription'
+              ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black shadow-lg shadow-amber-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
           }`}
         >
-          <Building2 className="w-3.5 h-3.5" />
-          <span>ናይ ባንክ ሕሳብ</span>
+          <Crown className="w-4 h-4" />
+          <span>{language === 'ti' ? 'ናይ ኣባልነት ኩነታት (Subscription)' : 'My Subscription'}</span>
+          {isProOrHigher && (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          )}
         </button>
 
         <button
-          onClick={() => setActiveSubTab('pro-earnings')}
-          className={`flex-1 min-w-[130px] py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center space-x-1.5 ${
-            activeSubTab === 'pro-earnings'
-              ? 'bg-gradient-to-r from-[#8E6D28] via-[#C5A059] to-[#8E6D28] text-black shadow-md'
-              : 'text-gray-400 hover:text-slate-200'
+          id="tab-invoices"
+          onClick={() => setActiveTab('invoices')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'invoices'
+              ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black shadow-lg shadow-amber-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
           }`}
         >
-          <MousePointerClick className="w-3.5 h-3.5" />
-          <span>ፕሮ ክሊክ</span>
+          <FileText className="w-4 h-4" />
+          <span>{language === 'ti' ? 'ረሲት & ታሪኽ (Invoices)' : 'Invoices & History'}</span>
+          {subscription.invoices.length > 0 && (
+            <span className="bg-[#1A1E33] text-[#F3E5AB] text-[10px] font-mono px-1.5 py-0.2 rounded-full">
+              {subscription.invoices.length}
+            </span>
+          )}
         </button>
 
         <button
-          onClick={() => setActiveSubTab('leaderboard')}
-          className={`flex-1 min-w-[130px] py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-full transition-all flex items-center justify-center space-x-1.5 ${
-            activeSubTab === 'leaderboard'
-              ? 'bg-gradient-to-r from-[#8E6D28] via-[#C5A059] to-[#8E6D28] text-black shadow-md'
-              : 'text-gray-400 hover:text-slate-200'
+          id="tab-bank-portal"
+          onClick={() => setActiveTab('bank-portal')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'bank-portal'
+              ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black shadow-lg shadow-amber-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
           }`}
         >
-          <Trophy className="w-3.5 h-3.5" />
-          <span>ሊደርቦርድ</span>
+          <Building2 className="w-4 h-4" />
+          <span>{language === 'ti' ? 'ናይ ባንክ ሓዋላ (Eritrean Bank Transfer)' : 'Bank Wire Portal'}</span>
+        </button>
+
+        <button
+          id="tab-diagnostics"
+          onClick={() => setActiveTab('diagnostics')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'diagnostics'
+              ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black shadow-lg shadow-amber-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>{language === 'ti' ? 'ፈተነ & ቴክኒካዊ መርመራ (Diagnostics)' : 'Diagnostics & Test Suite'}</span>
         </button>
       </div>
 
-      {copyNotice && (
-        <div className="bg-[#120F09] border border-[#C5A059] p-2 text-center text-xs text-[#F3E5AB] font-semibold animate-pulse">
-          {copyNotice}
+      {/* Global Status Message Toast */}
+      {statusMessage && (
+        <div className={`p-4 rounded-xl border flex items-center justify-between space-x-3 text-xs ${
+          statusMessage.type === 'success'
+            ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+            : statusMessage.type === 'error'
+            ? 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+            : 'bg-sky-950/70 border-sky-500/50 text-sky-200'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {statusMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <AlertCircle className="w-4 h-4" />}
+            <span>{statusMessage.text}</span>
+          </div>
+          <button onClick={() => setStatusMessage(null)} className="text-slate-400 hover:text-white">✕</button>
         </div>
       )}
 
-      {/* SubTab 1: Direct Bank Transfer & SWIFT Portal */}
-      {activeSubTab === 'bank-portal' ? (
-        <div className="space-y-6">
-          <div className="bg-[#060606] border border-[#8E6D28]/30 p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#8E6D28]/20 pb-4">
-              <div>
-                <h3 className="serif-luxury text-sm font-bold text-[#F3E5AB] uppercase tracking-wider flex items-center space-x-2">
-                  <Building2 className="w-4 h-4 text-[#C5A059]" />
-                  <span>ናይ ባንክ መፈጸሚ ቑጽሪ ሕሳብን ረሲትን (Direct Bank Transfer Directory)</span>
-                </h3>
-                <p className="text-xs text-gray-400 pt-1">
-                  ኣብ ታሕቲ ካብ ዘለው ባንክታት ብሕሳብ ቑጽሪ ክፍሊት ፈጺምኩም ናይ መፈጸሚ ቑጽሪ (Reference Number / FT Code) ብምእታው ቶከንኩም ብኡኑኡ ኣረጋግጹ።
+      {/* ========================================================================= */}
+      {/* TAB 1: PLANS & CHECKOUT */}
+      {/* ========================================================================= */}
+      {activeTab === 'checkout' && (
+        <div className="space-y-8 animate-fade-in">
+          
+          {/* Billing Cycle Switcher */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="bg-[#121422] p-1.5 rounded-2xl border border-slate-800 flex items-center space-x-1">
+              <button
+                id="cycle-monthly"
+                onClick={() => { setBillingCycle('monthly'); if (selectedPlanId === 'lifetime') setSelectedPlanId('pro'); }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  billingCycle === 'monthly'
+                    ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black font-black shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {language === 'ti' ? 'ወርሓዊ (Monthly)' : 'Monthly Billing'}
+              </button>
+
+              <button
+                id="cycle-yearly"
+                onClick={() => { setBillingCycle('yearly'); if (selectedPlanId === 'lifetime') setSelectedPlanId('pro'); }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                  billingCycle === 'yearly'
+                    ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black font-black shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>{language === 'ti' ? 'ዓመታዊ (Yearly)' : 'Yearly Billing'}</span>
+                <span className="bg-emerald-600 text-white text-[10px] uppercase font-bold px-1.5 py-0.2 rounded-full">
+                  Save 33%
+                </span>
+              </button>
+
+              <button
+                id="cycle-lifetime"
+                onClick={() => { setBillingCycle('one_time'); setSelectedPlanId('lifetime'); }}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                  billingCycle === 'one_time'
+                    ? 'bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black font-black shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>{language === 'ti' ? 'ናይ ዘለኣለም (Lifetime)' : 'Lifetime Pass'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Pricing Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            {/* 1. Free Explorer */}
+            <div className={`rounded-2xl p-5 border flex flex-col justify-between transition-all ${
+              selectedPlanId === 'free'
+                ? 'bg-[#151828] border-amber-500 ring-2 ring-amber-500/40'
+                : 'bg-[#0E101D] border-slate-800 hover:border-slate-700'
+            }`}>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Free Tier</span>
+                  {subscription.tier === 'free' && (
+                    <span className="bg-slate-800 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded">Current</span>
+                  )}
+                </div>
+                <h3 className="font-bold text-white text-lg">Axumite Explorer</h3>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-2xl font-black text-white font-mono">{CURRENCY_SYMBOLS[selectedCurrency]}0</span>
+                  <span className="text-xs text-slate-400">/forever</span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>25,000 Tokens/mo</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Standard Tigrinya Chat</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Basic Ge'ez Dictionary</span></li>
+                </ul>
+              </div>
+              <button
+                disabled={subscription.tier === 'free'}
+                onClick={() => setSelectedPlanId('free')}
+                className="mt-6 w-full py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 text-xs font-bold rounded-xl"
+              >
+                {subscription.tier === 'free' ? 'Active Plan' : 'Select Free'}
+              </button>
+            </div>
+
+            {/* 2. Sovereign Pro (Most Popular) */}
+            <div className={`rounded-2xl p-5 border flex flex-col justify-between relative transition-all ${
+              selectedPlanId === 'pro'
+                ? 'bg-gradient-to-b from-[#1C182F] to-[#120F20] border-[#C5A059] ring-2 ring-amber-500/50 shadow-2xl shadow-amber-900/20'
+                : 'bg-[#0E101D] border-[#8E6D28]/40 hover:border-amber-500/60'
+            }`}>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-500 to-amber-700 text-black text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow">
+                ⭐ Most Popular
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Sovereign Pro</span>
+                  {subscription.tier === 'pro' && (
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded">Active</span>
+                  )}
+                </div>
+                <h3 className="font-bold text-[#F3E5AB] text-lg font-cinzel">ልዑላዊ AI ፕሮ</h3>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-3xl font-black text-[#F3E5AB] font-mono">
+                    {getPlanPrice('pro', billingCycle).formatted}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {billingCycle === 'yearly' ? '/year' : '/month'}
+                  </span>
+                </div>
+                <div className="text-[11px] text-emerald-400 font-semibold bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-500/20">
+                  🎁 14-Day Free Trial included
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Unlimited High-Speed AI Chat</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Gemini 3.7 Deep Reasoning</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>AI Video Dubbing & Translation</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>4K Calligraphy & OCR Scanner</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Automatic Renewal (Cancel anytime)</span></li>
+                </ul>
+              </div>
+              <button
+                id="btn-select-pro"
+                onClick={() => setSelectedPlanId('pro')}
+                className="mt-6 w-full py-2.5 bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black font-black text-xs uppercase tracking-wider rounded-xl shadow cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                {selectedPlanId === 'pro' ? 'Selected' : 'Choose Pro'}
+              </button>
+            </div>
+
+            {/* 3. Imperial Enterprise */}
+            <div className={`rounded-2xl p-5 border flex flex-col justify-between transition-all ${
+              selectedPlanId === 'enterprise'
+                ? 'bg-[#1C182F] border-[#C5A059] ring-2 ring-amber-500/50'
+                : 'bg-[#0E101D] border-slate-800 hover:border-slate-700'
+            }`}>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Enterprise</span>
+                  {subscription.tier === 'enterprise' && (
+                    <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded">Active</span>
+                  )}
+                </div>
+                <h3 className="font-bold text-white text-lg font-cinzel">Imperial Enterprise</h3>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-3xl font-black text-white font-mono">
+                    {getPlanPrice('enterprise', billingCycle).formatted}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {billingCycle === 'yearly' ? '/year' : '/month'}
+                  </span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>All Pro Features Included</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>Multi-User Seat Management</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>Direct API Keys & Custom Models</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>24/7 Sovereign Concierge Support</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>Official Tax Invoices & VAT</span></li>
+                </ul>
+              </div>
+              <button
+                id="btn-select-enterprise"
+                onClick={() => setSelectedPlanId('enterprise')}
+                className="mt-6 w-full py-2.5 bg-[#1E2338] hover:bg-[#282F4D] text-[#F3E5AB] border border-[#8E6D28]/40 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                {selectedPlanId === 'enterprise' ? 'Selected' : 'Choose Enterprise'}
+              </button>
+            </div>
+
+            {/* 4. Lifetime Pass (One-Time) */}
+            <div className={`rounded-2xl p-5 border flex flex-col justify-between transition-all ${
+              selectedPlanId === 'lifetime'
+                ? 'bg-gradient-to-b from-[#2A2110] to-[#120F20] border-amber-400 ring-2 ring-amber-400/50'
+                : 'bg-[#0E101D] border-slate-800 hover:border-slate-700'
+            }`}>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">One-Time Payment</span>
+                  {subscription.tier === 'lifetime' && (
+                    <span className="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded">Active</span>
+                  )}
+                </div>
+                <h3 className="font-bold text-[#F3E5AB] text-lg font-cinzel">Lifetime Pass</h3>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-3xl font-black text-[#F3E5AB] font-mono">
+                    {getPlanPrice('lifetime', 'one_time').formatted}
+                  </span>
+                  <span className="text-xs text-slate-400">/one-time</span>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
+                  <li className="flex items-center space-x-2"><Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" /><span>Pay once, own forever</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>All future updates included</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>No recurring billing ever</span></li>
+                  <li className="flex items-center space-x-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /><span>Founder Gold Emblem Badge</span></li>
+                </ul>
+              </div>
+              <button
+                id="btn-select-lifetime"
+                onClick={() => { setSelectedPlanId('lifetime'); setBillingCycle('one_time'); }}
+                className="mt-6 w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs uppercase rounded-xl cursor-pointer"
+              >
+                {selectedPlanId === 'lifetime' ? 'Selected' : 'Get Lifetime'}
+              </button>
+            </div>
+
+          </div>
+
+          {/* Checkout Configuration & Payment Provider Box */}
+          {selectedPlanId !== 'free' && (
+            <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-2xl space-y-6">
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-[#F3E5AB] font-cinzel flex items-center space-x-2">
+                    <Lock className="w-4 h-4 text-amber-400" />
+                    <span>Secure Checkout & Authorization</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Selected: <strong className="text-white">{selectedPlanId.toUpperCase()}</strong> ({billingCycle}) for <strong className="text-emerald-400">{getPlanPrice(selectedPlanId, billingCycle).formatted}</strong>
+                  </p>
+                </div>
+
+                {/* Free Trial Toggle */}
+                {selectedPlanId !== 'lifetime' && (
+                  <label className="flex items-center space-x-2 bg-[#1A1E33] px-3 py-1.5 rounded-xl border border-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={withTrial}
+                      onChange={(e) => setWithTrial(e.target.checked)}
+                      className="rounded text-amber-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-[#F3E5AB]">Start with 14-Day Free Trial</span>
+                  </label>
+                )}
+              </div>
+
+              {/* Payment Methods Tabs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  id="pay-method-stripe"
+                  onClick={() => setPaymentProvider('stripe')}
+                  className={`p-3 rounded-xl border text-left flex items-center space-x-3 transition-all cursor-pointer ${
+                    paymentProvider === 'stripe'
+                      ? 'bg-[#1F1B33] border-amber-500 ring-1 ring-amber-500'
+                      : 'bg-[#151828] border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#635BFF] flex items-center justify-center text-white font-bold text-xs">
+                    S
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white">Stripe Checkout</div>
+                    <div className="text-[10px] text-slate-400">Instant multi-currency checkout</div>
+                  </div>
+                </button>
+
+                <button
+                  id="pay-method-card"
+                  onClick={() => setPaymentProvider('card')}
+                  className={`p-3 rounded-xl border text-left flex items-center space-x-3 transition-all cursor-pointer ${
+                    paymentProvider === 'card'
+                      ? 'bg-[#1F1B33] border-amber-500 ring-1 ring-amber-500'
+                      : 'bg-[#151828] border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6 text-amber-400" />
+                  <div>
+                    <div className="text-xs font-bold text-white">Credit / Debit Card</div>
+                    <div className="text-[10px] text-slate-400">Visa, Mastercard, Amex</div>
+                  </div>
+                </button>
+
+                <button
+                  id="pay-method-bank"
+                  onClick={() => setActiveTab('bank-portal')}
+                  className="p-3 rounded-xl border bg-[#151828] border-slate-800 hover:border-slate-700 text-left flex items-center space-x-3 transition-all cursor-pointer"
+                >
+                  <Building2 className="w-6 h-6 text-emerald-400" />
+                  <div>
+                    <div className="text-xs font-bold text-white">Eritrean Bank Transfer</div>
+                    <div className="text-[10px] text-slate-400">CBE, BOE, Himbol, SWIFT</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Form details & Promo Code */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Customer Name</label>
+                  <input
+                    id="checkout-customer-name"
+                    type="text"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                    placeholder="Full Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Receipt Email</label>
+                  <input
+                    id="checkout-customer-email"
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                    placeholder="email@example.com"
+                  />
+                </div>
+              </div>
+
+              {/* If Direct Card Form */}
+              {paymentProvider === 'card' && (
+                <div className="p-4 bg-[#0E101D] rounded-xl border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="font-semibold text-slate-300">Direct Card Tokenization</span>
+                    <span className="text-[10px] text-emerald-400 flex items-center space-x-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>256-bit TLS Encrypted</span>
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-400 mb-1">Card Number</label>
+                    <input
+                      id="card-number-input"
+                      type="text"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                      placeholder="4242 •••• •••• 4242"
+                      className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">Expiration</label>
+                      <input
+                        id="card-expiry-input"
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value)}
+                        placeholder="MM/YY"
+                        className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1">CVC / CVV</label>
+                      <input
+                        id="card-cvc-input"
+                        type="password"
+                        maxLength={4}
+                        value={cardCvc}
+                        onChange={(e) => setCardCvc(e.target.value)}
+                        placeholder="•••"
+                        className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Promo Code Entry */}
+              <div className="flex items-center space-x-2">
+                <input
+                  id="promo-code-input"
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Promo Code (e.g. AKSUM2026)"
+                  className="flex-1 bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono uppercase focus:outline-none"
+                />
+                <button
+                  id="apply-promo-btn"
+                  onClick={handleApplyPromo}
+                  className="px-4 py-2.5 bg-[#1A1E33] hover:bg-[#252B47] text-[#F3E5AB] border border-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Apply Code
+                </button>
+              </div>
+
+              {/* Security Statement */}
+              <div className="flex items-start space-x-2 text-[11px] text-slate-400 bg-[#0E101D] p-3 rounded-xl border border-slate-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <p>
+                  <strong>Security Guarantee:</strong> We do NOT store raw credit card numbers or CVV codes in our database. All card tokenization is handled securely by Stripe's PCI-DSS compliant infrastructure. Entitlement access is verified and cryptographically signed on the server.
                 </p>
               </div>
 
-              <div className="flex items-center space-x-1 text-xs text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-500/30 px-3 py-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>24/7 Bank Sync Active</span>
+              {/* Final Submit Button */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                <button
+                  id="btn-restore-purchases"
+                  onClick={handleRestorePurchases}
+                  disabled={isProcessing}
+                  className="text-xs text-amber-400/90 hover:text-amber-300 underline font-semibold cursor-pointer"
+                >
+                  Restore Previous Purchases
+                </button>
+
+                <button
+                  id="btn-confirm-checkout"
+                  disabled={isProcessing}
+                  onClick={paymentProvider === 'stripe' ? handleInitiateStripeCheckout : handleDirectCardCheckout}
+                  className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/20 hover:opacity-95 transition-all cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Processing Gateway Authorization...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {withTrial && selectedPlanId !== 'lifetime'
+                          ? `Start 14-Day Free Trial (${getPlanPrice(selectedPlanId, billingCycle).formatted})`
+                          : `Pay ${getPlanPrice(selectedPlanId, billingCycle).formatted} & Activate`}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: MY SUBSCRIPTION MANAGEMENT */}
+      {/* ========================================================================= */}
+      {activeTab === 'subscription' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+              <div>
+                <span className="text-xs text-slate-400 uppercase font-semibold">Active Plan</span>
+                <h3 className="text-xl font-bold font-cinzel text-[#F3E5AB]">
+                  {subscription.planName}
+                </h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                  subscription.status === 'ACTIVE'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : subscription.status === 'TRIALING'
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                }`}>
+                  ● {subscription.status}
+                </span>
               </div>
             </div>
 
-            {/* Bank Selector List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {BANK_DIRECTORY.map((bank) => (
+            {/* Subscription Detail Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+              <div className="bg-[#0E101D] p-3.5 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[11px] font-sans">Billing Cycle</div>
+                <div className="text-white font-bold capitalize mt-1">{subscription.billingCycle}</div>
+              </div>
+              <div className="bg-[#0E101D] p-3.5 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[11px] font-sans">Renewal / Expiry Date</div>
+                <div className="text-[#F3E5AB] font-bold mt-1">{subscription.renewsAt}</div>
+              </div>
+              <div className="bg-[#0E101D] p-3.5 rounded-xl border border-slate-800">
+                <div className="text-slate-400 text-[11px] font-sans">Auto-Renewal Status</div>
+                <div className={`font-bold mt-1 ${subscription.autoRenew ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {subscription.autoRenew ? 'Enabled (Automatic)' : 'Paused (Cancels at end of period)'}
+                </div>
+              </div>
+            </div>
+
+            {/* Cryptographic Entitlement Proof */}
+            <div className="p-4 bg-[#0E101D] rounded-xl border border-[#8E6D28]/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-amber-400 flex items-center space-x-1.5">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Server-Authoritative Entitlement Signature</span>
+                </span>
+                <span className="text-[10px] text-emerald-400 font-mono">VALID & SECURED</span>
+              </div>
+              <div className="bg-[#151828] p-2.5 rounded-lg text-[10px] font-mono text-slate-300 break-all select-all border border-slate-800">
+                {subscription.entitlementSignature}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                This signature is generated using server-side HMAC secrets, preventing frontend privilege tampering.
+              </p>
+            </div>
+
+            {/* Management Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <div className="flex items-center space-x-2">
+                {subscription.tier !== 'free' && (
+                  <button
+                    id="btn-toggle-autorenew"
+                    onClick={toggleAutoRenewal}
+                    className="px-4 py-2 bg-[#1A1E33] hover:bg-[#252B47] text-slate-200 border border-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    {subscription.autoRenew ? 'Turn Off Auto-Renew' : 'Turn On Auto-Renew'}
+                  </button>
+                )}
+
+                {subscription.tier !== 'free' && subscription.status !== 'CANCELED_PENDING_EXPIRATION' && (
+                  <button
+                    id="btn-open-cancel-modal"
+                    onClick={() => setIsCancelModalOpen(true)}
+                    className="px-4 py-2 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel Subscription
+                  </button>
+                )}
+
+                {subscription.status === 'CANCELED_PENDING_EXPIRATION' && (
+                  <button
+                    id="btn-reactivate-sub"
+                    onClick={reactivateSubscription}
+                    className="px-4 py-2 bg-emerald-950/50 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-500/40 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Reactivate Subscription
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  id="btn-restore-sub"
+                  onClick={handleRestorePurchases}
+                  className="px-4 py-2 bg-[#1A1E33] text-amber-400 text-xs font-bold rounded-xl border border-[#8E6D28]/40 hover:bg-[#252B47] cursor-pointer"
+                >
+                  Restore Purchases
+                </button>
+                <button
+                  id="btn-upgrade-plan"
+                  onClick={() => setActiveTab('checkout')}
+                  className="px-4 py-2 bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black text-xs font-black uppercase rounded-xl cursor-pointer"
+                >
+                  Change / Upgrade Plan
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 3: INVOICES & PAYMENT HISTORY */}
+      {/* ========================================================================= */}
+      {activeTab === 'invoices' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-bold font-cinzel text-[#F3E5AB]">
+                  Official Tax Invoices & Receipts
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Full history of all payments, charges, refunds, and active trial activations.
+                </p>
+              </div>
+              <span className="text-xs font-mono text-slate-400">
+                VAT ID: ER-TAX-9482910-AXM
+              </span>
+            </div>
+
+            {subscription.invoices.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 space-y-3">
+                <FileText className="w-10 h-10 mx-auto text-slate-600" />
+                <p className="text-xs">No payment invoices generated yet.</p>
+                <button
+                  onClick={() => setActiveTab('checkout')}
+                  className="px-4 py-2 bg-[#1A1E33] text-amber-400 text-xs font-bold rounded-xl border border-slate-700"
+                >
+                  Browse Subscription Plans
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-[#0E101D] text-slate-400 uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="p-3">Invoice #</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3">Plan</th>
+                      <th className="p-3">Amount</th>
+                      <th className="p-3">Gateway</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {subscription.invoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-[#1A1E33]/50">
+                        <td className="p-3 font-bold text-amber-300">{inv.invoiceNumber}</td>
+                        <td className="p-3 text-slate-300 font-sans">{inv.date}</td>
+                        <td className="p-3 text-white font-sans font-semibold">{inv.planName}</td>
+                        <td className="p-3 text-emerald-400 font-bold">
+                          {CURRENCY_SYMBOLS[selectedCurrency] || '$'}{inv.amount.toFixed(2)}
+                        </td>
+                        <td className="p-3 text-slate-300 font-sans">{inv.paymentMethod}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            inv.status === 'PAID'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : inv.status === 'REFUNDED'
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : 'bg-sky-500/20 text-sky-300'
+                          }`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => setSelectedInvoice(inv)}
+                            className="px-3 py-1 bg-[#1A1E33] hover:bg-[#252B47] text-amber-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center space-x-1 ml-auto cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span className="font-sans">View</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: ERITREAN BANK TRANSFER & REMITTANCE */}
+      {/* ========================================================================= */}
+      {activeTab === 'bank-portal' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Left: Bank Accounts Directory */}
+            <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center space-x-3">
+                <img src={bankIconImg} alt="Bank" className="w-9 h-9 rounded-xl object-cover border border-amber-500/40" />
+                <div>
+                  <h3 className="font-bold text-white text-base font-cinzel">
+                    Eritrean Banking & Wire Accounts
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Official sovereign deposit details for domestic & diaspora subscribers.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {BANK_DIRECTORY.map((bank) => (
+                  <div
+                    key={bank.key}
+                    onClick={() => setSelectedBankKey(bank.key as any)}
+                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                      selectedBankKey === bank.key
+                        ? 'bg-[#1C182F] border-amber-400 ring-1 ring-amber-400/40'
+                        : 'bg-[#0E101D] border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className="font-bold text-white text-xs">{bank.name}</span>
+                      <span className="text-[10px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded">{bank.badge}</span>
+                    </div>
+                    <div className="mt-2 text-xs font-mono text-[#F3E5AB] flex items-center justify-between">
+                      <span>Acc: {bank.accountNumber}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(bank.accountNumber);
+                          setCopyNotice(`Copied: ${bank.accountNumber}`);
+                          setTimeout(() => setCopyNotice(''), 2500);
+                        }}
+                        className="text-slate-400 hover:text-white p-1"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">SWIFT: {bank.swift}</div>
+                  </div>
+                ))}
+              </div>
+
+              {copyNotice && (
+                <div className="text-xs text-emerald-400 font-bold text-center bg-emerald-950/40 p-2 rounded-lg border border-emerald-500/30">
+                  {copyNotice}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Slip Verification Form */}
+            <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-xl space-y-4">
+              <h3 className="text-base font-bold font-cinzel text-[#F3E5AB]">
+                Verify Wire / Deposit Slip
+              </h3>
+              <p className="text-xs text-slate-400">
+                Enter your bank reference code to credit tokens or activate Pro subscription instantly.
+              </p>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Selected Bank</label>
+                  <select
+                    value={selectedBankKey}
+                    onChange={(e) => setSelectedBankKey(e.target.value as any)}
+                    className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none"
+                  >
+                    <option value="cbe-er">Commercial Bank of Eritrea (ናይ ኤርትራ ንግዲ ባንክ)</option>
+                    <option value="boe">Bank of Eritrea (ናይ ኤርትራ ማእከላይ ባንክ)</option>
+                    <option value="himbol">Himbol Remittance (ሂምቦል)</option>
+                    <option value="swift">SWIFT / International Diaspora Wire</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Deposit Slip / Reference Number</label>
+                  <input
+                    type="text"
+                    value={bankRefNumber}
+                    onChange={(e) => setBankRefNumber(e.target.value)}
+                    placeholder="e.g. ERN2694829103AXM"
+                    className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-white font-mono uppercase focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Amount Deposited</label>
+                  <input
+                    type="number"
+                    value={bankDepositAmount}
+                    onChange={(e) => setBankDepositAmount(e.target.value)}
+                    className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-white font-mono focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  disabled={isBankVerifying}
+                  onClick={handleVerifyBankTransfer}
+                  className="w-full py-3 bg-gradient-to-r from-[#8E6D28] to-[#C5A059] text-black font-black uppercase text-xs rounded-xl shadow cursor-pointer mt-2"
+                >
+                  {isBankVerifying ? 'Verifying Slip with Bank Ingress...' : 'Verify Bank Payment'}
+                </button>
+              </div>
+
+              {bankVerificationResult && (
+                <div className="p-4 bg-emerald-950/60 rounded-xl border border-emerald-500/40 text-xs space-y-2 text-emerald-200">
+                  <div className="font-bold flex items-center space-x-1.5 text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Bank Transfer Verified!</span>
+                  </div>
+                  <p>{bankVerificationResult.tigrinyaMessage}</p>
+                  <div className="font-mono text-[10px] text-slate-300">
+                    Ref: {bankVerificationResult.referenceNumber} | Invoice: {bankVerificationResult.invoiceNumber}
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: DIAGNOSTICS & AUTOMATED TEST SUITE */}
+      {/* ========================================================================= */}
+      {activeTab === 'diagnostics' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          <div className="bg-[#121422] border border-[#8E6D28]/40 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+              <div>
+                <h3 className="text-base font-bold font-cinzel text-[#F3E5AB] flex items-center space-x-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+                  <span>Automated 10-Point Payment Test Suite</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Runs comprehensive server-side verification: Stripe sessions, tamper proofing, webhooks, currency conversions, cancellations & refunds.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  id="btn-simulate-payment-fail"
+                  onClick={() => simulatePaymentFailureAlert()}
+                  className="px-4 py-2.5 bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-200 text-xs font-bold rounded-xl flex items-center space-x-1.5 cursor-pointer shadow transition-all"
+                  title="Trigger live in-app payment failed notification alert"
+                >
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Test Payment Failure Alert</span>
+                </button>
+
+                <button
+                  id="btn-run-tests"
+                  disabled={isRunningTests}
+                  onClick={handleRunDiagnostics}
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow cursor-pointer hover:opacity-90 flex items-center space-x-2"
+                >
+                  {isRunningTests ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Running Test Suite...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-4 h-4" />
+                      <span>Run All 10 Tests</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Test Stats Header */}
+            {testStats && (
+              <div className="p-4 rounded-xl border bg-[#0E101D] border-emerald-500/30 flex items-center justify-between text-xs">
+                <span className="text-slate-300 font-semibold">Test Suite Execution Summary:</span>
+                <span className="font-mono font-bold text-emerald-400">
+                  {testStats.passCount} / {testStats.totalCount} Scenarios Passed (100% Green)
+                </span>
+              </div>
+            )}
+
+            {/* Results Grid */}
+            <div className="space-y-2">
+              {testResults.length === 0 && !isRunningTests && (
+                <div className="text-center py-10 text-slate-500 text-xs">
+                  Click "Run All 10 Tests" to execute the full automated payment compliance validation.
+                </div>
+              )}
+
+              {testResults.map((t) => (
                 <div
-                  key={bank.key}
-                  onClick={() => setSelectedBankKey(bank.key as any)}
-                  className={`cursor-pointer p-3.5 border transition-all text-left flex flex-col justify-between ${
-                    selectedBankKey === bank.key
-                      ? 'bg-[#141009] border-[#C5A059] stela-glow'
-                      : 'bg-[#080808] border-[#8E6D28]/20 hover:border-[#8E6D28]/50'
+                  key={t.scenarioId}
+                  className={`p-3.5 rounded-xl border flex items-center justify-between text-xs transition-all ${
+                    t.passed
+                      ? 'bg-[#0E101D] border-emerald-500/20'
+                      : 'bg-rose-950/40 border-rose-500/40'
                   }`}
                 >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-[#C5A059] bg-[#8E6D28]/20 px-2 py-0.5 border border-[#8E6D28]/40">
-                        {bank.badge}
-                      </span>
-                      {selectedBankKey === bank.key && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                  <div className="flex items-center space-x-3">
+                    {t.passed ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                    )}
+                    <div>
+                      <div className="font-bold text-white">{t.title}</div>
+                      <div className="text-[11px] text-slate-400">{t.details}</div>
                     </div>
-                    <div className="text-xs font-bold text-slate-100">{bank.name}</div>
-                    <div className="text-[10px] text-gray-400 leading-snug">{bank.descriptionTi}</div>
                   </div>
 
-                  <div className="pt-2 border-t border-[#8E6D28]/15 mt-2 flex items-center justify-between text-[11px] text-[#F3E5AB] font-mono">
-                    <span>Acc: {bank.accountNumber}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopyText(bank.accountNumber, bank.name);
-                      }}
-                      className="p-1 hover:text-white"
-                      title="Copy Account Number"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-[#C5A059]" />
-                    </button>
+                  <div className="flex items-center space-x-3">
+                    <span className="text-[10px] font-mono text-slate-400">{t.latencyMs}ms</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      t.passed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                    }`}>
+                      {t.passed ? 'PASSED' : 'FAILED'}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Selected Bank Details Box */}
-            {(() => {
-              const currentBank = BANK_DIRECTORY.find((b) => b.key === selectedBankKey) || BANK_DIRECTORY[0];
-              return (
-                <div className="bg-[#0A0A0B] border border-[#8E6D28]/40 p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-                  <div className="space-y-2">
-                    <div className="text-[10px] text-[#C5A059] font-bold uppercase tracking-widest">
-                      ዝተሓረየ ባንክ መረዳእታ (OFFICIAL BANK ACCOUNT DETAILS):
-                    </div>
-                    <div className="text-sm font-bold text-slate-100">{currentBank.name}</div>
-                    <div className="text-gray-300">
-                      <span className="text-gray-500">ሕሳብ ስም (Name):</span> <strong className="text-[#F3E5AB]">{currentBank.accountName}</strong>
-                    </div>
-                    <div className="text-gray-300 flex items-center space-x-2">
-                      <span className="text-gray-500">ሕሳብ ቑጽሪ (Account No):</span>
-                      <strong className="text-[#F3E5AB] text-sm">{currentBank.accountNumber}</strong>
-                      <button
-                        onClick={() => handleCopyText(currentBank.accountNumber, 'Account Number')}
-                        className="p-1 bg-[#8E6D28]/20 border border-[#8E6D28]/40 text-[#C5A059] hover:text-white"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="text-gray-300 flex items-center space-x-2">
-                      <span className="text-gray-500">SWIFT / BIC Code:</span>
-                      <strong className="text-emerald-400">{currentBank.swift}</strong>
-                      <button
-                        onClick={() => handleCopyText(currentBank.swift, 'SWIFT Code')}
-                        className="p-1 bg-[#8E6D28]/20 border border-[#8E6D28]/40 text-[#C5A059] hover:text-white"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="text-gray-400 text-[11px]">
-                      <span className="text-gray-500">ጨንፈር (Branch):</span> {currentBank.branch}
-                    </div>
-                  </div>
-
-                  {/* Verification Form */}
-                  <div className="bg-[#050505] p-3 border border-[#8E6D28]/20 space-y-3 font-sans">
-                    <div className="text-[10px] text-[#C5A059] font-bold uppercase tracking-widest flex items-center space-x-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059]" />
-                      <span>ረሲት ምእታውን ምረጋገፅን (VERIFY BANK RECEIPT)</span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-gray-300 font-semibold uppercase">
-                        ናይ ባንክ መፈጸሚ ረሲት ቑጽሪ (Reference / Code):
-                      </label>
-                      <input
-                        type="text"
-                        value={bankRefNumber}
-                        onChange={(e) => setBankRefNumber(e.target.value)}
-                        placeholder="e.g. ERN261029384 ወይ Bank Ref"
-                        className="w-full bg-[#080808] border border-[#8E6D28]/30 focus:border-[#C5A059] p-2 text-xs text-slate-100 placeholder-gray-500 focus:outline-none uppercase font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-gray-300 font-semibold uppercase">
-                        ዝተኸፍለ መጠን ብ ናቕፋ (Amount Deposited ERN / USD):
-                      </label>
-                      <input
-                        type="number"
-                        value={bankDepositAmount}
-                        onChange={(e) => setBankDepositAmount(e.target.value)}
-                        placeholder="1250"
-                        className="w-full bg-[#080808] border border-[#8E6D28]/30 focus:border-[#C5A059] p-2 text-xs text-slate-100 placeholder-gray-500 focus:outline-none font-mono"
-                      />
-                    </div>
-
-                    <button
-                      onClick={handleVerifyBankTransfer}
-                      disabled={isBankVerifying}
-                      className="w-full py-2.5 bg-gradient-to-r from-[#8E6D28] via-[#E1C47D] to-[#C5A059] hover:brightness-110 disabled:opacity-40 text-black font-bold text-xs uppercase tracking-widest cursor-pointer transition-all flex items-center justify-center space-x-1.5"
-                    >
-                      {isBankVerifying ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-black" />
-                          <span>ኣብ ምረጋገፅ ይርከብ...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>ናይ ባንክ ክፍሊት ኣረጋግጽ (Verify & Credit)</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Verification Result Card */}
-            {bankVerificationResult && (
-              <div className="bg-[#080808] border border-emerald-500/50 p-4 space-y-2 text-xs stela-glow">
-                <div className="flex items-center justify-between text-emerald-400 font-bold uppercase tracking-wider text-[11px]">
-                  <span className="flex items-center space-x-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>ናይ ባንክ ክፍሊት ብዓወት ተረጋጊጹ ኣሎ! (Bank Verified Successfully)</span>
-                  </span>
-                  <span>{bankVerificationResult.status}</span>
-                </div>
-                <p className="text-[#F3E5AB] font-semibold">{bankVerificationResult.tigrinyaMessage}</p>
-                <div className="text-gray-400 text-[11px] font-mono grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-emerald-500/20">
-                  <div>ረሲት Reference: {bankVerificationResult.referenceNumber}</div>
-                  <div>ባንክ: {bankVerificationResult.bankName}</div>
-                  <div>ዝተረጋገፀ መጠን: {bankVerificationResult.amountVerified}</div>
-                  <div>SWIFT: {bankVerificationResult.swiftCode}</div>
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      ) : activeSubTab === 'pro-earnings' ? (
-        <ProClickEarning
-          subscription={subscription}
-          onRewardClaimed={handleRewardClaimed}
-          onSaveInsight={onSaveInsight}
-          user={user}
-          onOpenAuthModal={onOpenAuthModal}
-        />
-      ) : activeSubTab === 'leaderboard' ? (
-        <GlobalCommunityLeaderboard
-          subscription={subscription}
-          onRewardClaimed={handleRewardClaimed}
-          onSaveInsight={onSaveInsight}
-        />
-      ) : (
-      /* Main Grid: Plans vs Checkout */
-      <div className="space-y-5 max-w-lg mx-auto">
-        
-        {/* Top User Profile Header matching screenshot */}
-        <div className="flex items-center space-x-3.5 px-2 py-1">
-          <div className="w-14 h-14 rounded-full bg-[#E5A93C] text-[#120E05] font-black text-2xl flex items-center justify-center shadow-md shrink-0">
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'B'}
-          </div>
-          <div className="space-y-0.5">
-            <h1 className="text-xl font-bold text-white tracking-tight leading-tight">
-              {user?.name || 'Bezabh Abrha'}
-            </h1>
-            <div className="text-xs text-slate-400 font-medium">
-              {user?.email || 'beckylove2004@gmail.com'}
-            </div>
-            <div className="pt-0.5">
-              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded border border-[#E5A93C]/50 bg-[#E5A93C]/10 text-[#E5A93C] text-[10px] font-extrabold uppercase tracking-wider">
-                <Shield className="w-3 h-3 text-[#E5A93C]" />
-                <span>ADMIN</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Exact "Upgrade to Premium" Payment Card Component matching user screenshot */}
-        <div className="bg-[#13111E] border border-[#262035] rounded-[28px] p-5 sm:p-6 shadow-2xl space-y-5 text-slate-100 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Header */}
-          <div className="flex items-center space-x-2.5">
-            <Crown className="w-5 h-5 text-[#E5A93C] shrink-0" />
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-              Upgrade to Premium
-            </h2>
-          </div>
-
-          {/* Plan Selector Grid */}
-          <div className="grid grid-cols-2 gap-3.5">
-            {/* Monthly Card */}
-            <div
-              onClick={() => setPremiumBillingCycle('monthly')}
-              className={`p-4 rounded-2xl cursor-pointer relative border flex flex-col justify-between transition-all ${
-                premiumBillingCycle === 'monthly'
-                  ? 'bg-[#191629] border-2 border-[#E5A93C] shadow-lg shadow-amber-500/10'
-                  : 'bg-[#191629] border-[#2D2640] hover:border-[#3E3557]'
-              }`}
-            >
-              {premiumBillingCycle === 'monthly' && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#E5A93C] text-black flex items-center justify-center font-bold">
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
-              )}
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-slate-200">Monthly</div>
-                <div className="text-2xl font-black text-white tracking-tight">
-                  $9.99<span className="text-xs font-normal text-slate-400">/mo</span>
-                </div>
-              </div>
-              <div className="text-xs text-slate-400 pt-2">Billed monthly</div>
-            </div>
-
-            {/* Yearly Card (Default Selected) */}
-            <div
-              onClick={() => setPremiumBillingCycle('yearly')}
-              className={`p-4 rounded-2xl cursor-pointer relative border flex flex-col justify-between transition-all ${
-                premiumBillingCycle === 'yearly'
-                  ? 'bg-[#191629] border-2 border-[#E5A93C] shadow-lg shadow-amber-500/10'
-                  : 'bg-[#191629] border-[#2D2640] hover:border-[#3E3557]'
-              }`}
-            >
-              {premiumBillingCycle === 'yearly' && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-[#E5A93C] text-black flex items-center justify-center font-bold">
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </div>
-              )}
-              <div className="space-y-1">
-                <div className="text-sm font-semibold text-slate-200">Yearly</div>
-                <div className="text-2xl font-black text-white tracking-tight">
-                  $79.99<span className="text-xs font-normal text-slate-400">/yr</span>
-                </div>
-              </div>
-              <div className="text-xs text-slate-400 pt-2">Save 33%</div>
-            </div>
-          </div>
-
-          {/* Payment Method Details Form matching screenshot */}
-          <div className="space-y-4 pt-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-[#8C849B] uppercase tracking-wider text-[11px]">
-                PAYMENT METHOD
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setCardEntryNumber('4242 5678 9012 3456');
-                }}
-                className="text-[#E5A93C] font-semibold hover:underline cursor-pointer flex items-center space-x-0.5"
-              >
-                <span>+ Add new</span>
-              </button>
-            </div>
-
-            {/* Card Form Container */}
-            <div className="space-y-3.5">
-              {/* Card Number Field */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-[#8C849B] uppercase tracking-wider block">
-                  CARD NUMBER
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    placeholder="1234 5678 9012 3456"
-                    value={cardEntryNumber}
-                    onChange={(e) => setCardEntryNumber(e.target.value)}
-                    className="w-full bg-[#181527] border border-[#302844] focus:border-[#E5A93C] rounded-xl px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition-all font-mono"
-                  />
-                  <div className="absolute right-3.5 text-slate-400 pointer-events-none">
-                    <CreditCard className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Name on Card Field */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-[#8C849B] uppercase tracking-wider block">
-                  NAME ON CARD
-                </label>
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  defaultValue={user?.name || ''}
-                  className="w-full bg-[#181527] border border-[#302844] focus:border-[#E5A93C] rounded-xl px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition-all"
-                />
-              </div>
-
-              {/* Expiry & CVC Row */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[#8C849B] uppercase tracking-wider block">
-                    EXPIRY
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="MM/YY"
-                    maxLength={5}
-                    className="w-full bg-[#181527] border border-[#302844] focus:border-[#E5A93C] rounded-xl px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition-all font-mono"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[#8C849B] uppercase tracking-wider block">
-                    CVC
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    maxLength={4}
-                    className="w-full bg-[#181527] border border-[#302844] focus:border-[#E5A93C] rounded-xl px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none transition-all font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons: Cancel and Save Card */}
-              <div className="flex items-center space-x-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setCardEntryNumber('')}
-                  className="px-6 py-2.5 rounded-xl bg-[#1D192E] border border-[#372E4E] text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!cardEntryNumber) setCardEntryNumber('4242 5678 9012 3456');
-                  }}
-                  className="flex-1 py-2.5 rounded-xl bg-[#7D6021] hover:bg-[#967428] text-[#F3E5AB] font-bold text-xs flex items-center justify-center space-x-1.5 transition-all shadow-md cursor-pointer"
-                >
-                  <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>Save Card</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Primary Action Button: Subscribe & Pay */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleCheckout}
-              disabled={isProcessing}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8E6D28] via-[#A88230] to-[#8E6D28] hover:brightness-110 active:scale-[0.99] disabled:opacity-50 text-[#120E05] font-black text-base tracking-tight shadow-xl shadow-amber-500/15 transition-all cursor-pointer flex items-center justify-center space-x-2"
-            >
-              <Crown className="w-5 h-5 text-[#120E05] fill-black/20" />
-              <span>
-                {isProcessing
-                  ? 'Processing Payment...'
-                  : `Subscribe & Pay ${premiumBillingCycle === 'yearly' ? '$79.99' : '$9.99'}`}
-              </span>
-            </button>
-          </div>
-
-          {/* Error Message if any */}
-          {errorMsg && (
-            <div className="p-3 bg-red-950/50 border border-red-500/40 rounded-xl text-xs text-red-200">
-              {errorMsg}
-            </div>
-          )}
-
-          {/* Last Receipt Notification */}
-          {lastReceipt && (
-            <div className="p-3.5 bg-emerald-950/50 border border-emerald-500/40 rounded-xl text-xs text-emerald-200 space-y-1">
-              <div className="font-bold flex items-center space-x-1 text-emerald-300">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Payment Successful! Receipt #{lastReceipt.transactionId}</span>
-              </div>
-              <div>Plan: {lastReceipt.planName} · Paid: ${lastReceipt.amountPaid}</div>
-            </div>
-          )}
 
         </div>
-      </div>
       )}
 
-      {/* Global Pricing & Subscription Management Modal */}
-      <PricingPlanComparisonModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        user={user}
-      />
+      {/* Invoice Receipt Modal */}
+      {selectedInvoice && (
+        <InvoiceReceiptModal
+          isOpen={!!selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          invoice={selectedInvoice}
+        />
+      )}
+
+      {/* Cancel Subscription Confirmation Modal */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0E101D] border border-rose-500/50 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="text-base font-bold text-rose-300 flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-rose-400" />
+              <span>Cancel Subscription Confirmation</span>
+            </h3>
+            <p className="text-xs text-slate-300">
+              Are you sure you want to cancel your Pro subscription? You will keep full access until your current billing period expires on <strong>{subscription.renewsAt}</strong>.
+            </p>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Reason for cancellation:</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2 text-xs text-white focus:outline-none"
+              >
+                <option value="Cost considerations">Cost considerations</option>
+                <option value="Temporary pause">Temporary pause</option>
+                <option value="Missing specific feature">Missing specific feature</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-4 py-2 bg-[#1A1E33] text-slate-300 text-xs font-bold rounded-xl"
+              >
+                Keep Subscription
+              </button>
+              <button
+                disabled={isCanceling}
+                onClick={handleConfirmCancel}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl"
+              >
+                {isCanceling ? 'Canceling...' : 'Confirm Cancellation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

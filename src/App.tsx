@@ -44,6 +44,7 @@ import { PushNotificationToast } from './components/PushNotificationToast';
 import { AiVideoTranslatorModal } from './components/AiVideoTranslatorModal';
 import { VoiceCommandOverlay } from './components/VoiceCommandOverlay';
 import { AlwaysListeningFloatingIndicator } from './components/AlwaysListeningFloatingIndicator';
+import { UserFileManagerModal } from './components/UserFileManagerModal';
 import { useAlwaysListeningVoice } from './hooks/useAlwaysListeningVoice';
 import { useLanguage } from './context/LanguageContext';
 import { EducationPlatformView } from './components/education/EducationPlatformView';
@@ -57,9 +58,11 @@ import {
   getStoredPreferences, 
   saveStoredPreferences, 
   playGoldenNotificationChime, 
-  triggerBrowserPushNotification 
+  triggerBrowserPushNotification,
+  NOTIFICATION_EVENT_NAME
 } from './services/notificationService';
 import { playVoiceTriggerChime } from './utils/audioChime';
+import { syncUserProfileToFirestore } from './lib/firebase';
 import { WifiOff, RefreshCw, Hand, ChevronLeft, ChevronRight, Mic, Radio } from 'lucide-react';
 import logoImg from './assets/images/axumite_ai_logo_1786607890310.jpg';
 import axumiteBgImg from './assets/images/axumite_background_1786611272574.jpg';
@@ -97,6 +100,7 @@ export default function App() {
   const [isScholarshipOpen, setIsScholarshipOpen] = useState(false);
   const [isVideoTranslatorOpen, setIsVideoTranslatorOpen] = useState(false);
   const [isVoiceOverlayOpen, setIsVoiceOverlayOpen] = useState(false);
+  const [isUserFileVaultOpen, setIsUserFileVaultOpen] = useState(false);
   const [targetScholarshipId, setTargetScholarshipId] = useState<string | undefined>(undefined);
   const [isLegalAdvisorOpen, setIsLegalAdvisorOpen] = useState(false);
   const [isMechanicOpen, setIsMechanicOpen] = useState(false);
@@ -219,6 +223,21 @@ export default function App() {
     }
   };
 
+  // Sync programmatic and cross-system notifications (e.g. Stripe payment failure alerts)
+  useEffect(() => {
+    const handleNewNotificationEvent = (e: any) => {
+      const detail: AppNotification = e?.detail;
+      if (!detail) return;
+      setNotifications((prev) => [detail, ...prev.filter((n) => n.id !== detail.id)]);
+      setActivePushToast(detail);
+    };
+
+    window.addEventListener(NOTIFICATION_EVENT_NAME as any, handleNewNotificationEvent);
+    return () => {
+      window.removeEventListener(NOTIFICATION_EVENT_NAME as any, handleNewNotificationEvent);
+    };
+  }, []);
+
   const triggerCursorToChat = () => {
     setActiveTab('chat');
     setCursorSignal((prev) => prev + 1);
@@ -297,6 +316,9 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('axumite_user_profile', JSON.stringify(user));
+      if (user?.email && user?.isLoggedIn) {
+        syncUserProfileToFirestore(user);
+      }
     } catch (err) {
       console.error('Failed to save user profile:', err);
     }
@@ -821,6 +843,18 @@ export default function App() {
           setIsDrawerOpen(false);
           setIsVoiceOverlayOpen(true);
         }}
+        onOpenFileVault={() => {
+          setIsDrawerOpen(false);
+          setIsUserFileVaultOpen(true);
+        }}
+      />
+
+      {/* User Cloud File Storage & Vault Modal */}
+      <UserFileManagerModal
+        isOpen={isUserFileVaultOpen}
+        onClose={() => setIsUserFileVaultOpen(false)}
+        user={user}
+        onSendToChat={handleSelectPromptForChat}
       />
 
       {/* Global Scholarships & Grants Opportunities Modal */}
@@ -967,17 +1001,15 @@ export default function App() {
       <PushNotificationToast
         notification={activePushToast}
         onClose={() => setActivePushToast(null)}
-        onClick={(notif) => {
+        onActionClick={(notif) => {
           setActivePushToast(null);
           if (notif.category === 'scholarship') {
             handleOpenScholarshipFromNotification(notif.scholarshipId);
+          } else if (notif.category === 'payment_failed' || notif.actionType === 'open_payment') {
+            setActiveTab('payment');
           } else {
             setIsNotificationCenterOpen(true);
           }
-        }}
-        onOpenNotificationCenter={() => {
-          setActivePushToast(null);
-          setIsNotificationCenterOpen(true);
         }}
       />
 
@@ -989,9 +1021,17 @@ export default function App() {
         preferences={notificationPrefs}
         onUpdateNotifications={handleUpdateNotifications}
         onUpdatePreferences={handleUpdateNotificationPrefs}
-        onOpenScholarship={(id) => {
+        onOpenScholarshipOpportunity={(id) => {
           setIsNotificationCenterOpen(false);
           handleOpenScholarshipFromNotification(id);
+        }}
+        onOpenPaymentManagement={() => {
+          setIsNotificationCenterOpen(false);
+          setActiveTab('payment');
+        }}
+        onNavigateTab={(tab) => {
+          setIsNotificationCenterOpen(false);
+          setActiveTab(tab as AppTab);
         }}
         onTriggerTestNotification={handleTriggerTestPushNotification}
       />

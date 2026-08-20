@@ -3,7 +3,7 @@ import {
   X, Sparkles, MessageSquare, Languages, Mic, Briefcase, FileText, 
   Car, Clock, User, ShieldCheck, ChevronRight, LayoutDashboard, 
   CreditCard, BookmarkCheck, Globe, HelpCircle, Bot, GraduationCap, Palette, Bell, Video,
-  Building2, Landmark, TrendingUp, Compass, Heart
+  Building2, Landmark, TrendingUp, Compass, Heart, HardDrive, Database
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { AppTab, UserProfile } from '../types';
@@ -27,6 +27,7 @@ interface SovereignSideDrawerProps {
   onOpenNotifications?: () => void;
   onOpenVideoTranslator?: () => void;
   onOpenVoiceOverlay?: () => void;
+  onOpenFileVault?: () => void;
 }
 
 export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
@@ -47,6 +48,7 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
   onOpenNotifications,
   onOpenVideoTranslator,
   onOpenVoiceOverlay,
+  onOpenFileVault,
 }) => {
   const { language, setLanguage, t } = useLanguage();
 
@@ -376,6 +378,30 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
                 </button>
+
+                {/* 8. User Cloud File Storage & Vault */}
+                {onOpenFileVault && (
+                  <button
+                    onClick={() => handleSelectTool(onOpenFileVault)}
+                    className="w-full bg-gradient-to-r from-blue-950/40 via-[#121A2E] to-blue-900/30 hover:from-blue-900/50 hover:to-blue-800/40 border border-blue-500/50 hover:border-blue-400 rounded-2xl p-3 flex items-center justify-between transition-all group cursor-pointer shadow-md"
+                  >
+                    <div className="flex items-center space-x-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-blue-950 border border-blue-400/60 text-blue-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
+                        <HardDrive className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-blue-100 group-hover:text-white transition-colors flex items-center space-x-1.5">
+                          <span>{language === 'ti' ? 'ናይ ፋይል ክላውድ መኽዘን' : 'Cloud File Vault & Storage'}</span>
+                          <span className="text-[9px] bg-blue-500/30 text-blue-200 font-mono px-1 rounded">CLOUD</span>
+                        </div>
+                        <div className="text-[10.5px] text-blue-300/70">
+                          {language === 'ti' ? 'ሰነዳት፣ ስእልታት፣ ግእዝ ጽሑፋት ምዕቃብ' : 'Upload, view, search & manage private files'}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                )}
               </div>
             </div>
 

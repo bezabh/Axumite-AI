@@ -172,6 +172,18 @@ export const AiVideoTranslatorModal: React.FC<AiVideoTranslatorModalProps> = ({
       const isTi = targetLang.toLowerCase().includes('tigrinya') || targetLang === 'ti';
       utterance.lang = isTi ? 'ti-ER' : 'en-US';
 
+      if (isTi) {
+        const voices = window.speechSynthesis.getVoices();
+        const hornVoice = voices.find(
+          (v) =>
+            v.lang.startsWith('ti') ||
+            v.lang.startsWith('am') ||
+            v.name.toLowerCase().includes('tigrinya') ||
+            v.name.toLowerCase().includes('amharic')
+        );
+        if (hornVoice) utterance.voice = hornVoice;
+      }
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn('Speech synthesis dubbing notice:', e);

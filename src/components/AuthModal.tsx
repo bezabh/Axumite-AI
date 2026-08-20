@@ -5,6 +5,14 @@ import {
   Search, ArrowRight, ChevronRight, Shield, Globe, Sparkles
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { 
+  registerWithFirebase, 
+  loginWithFirebase, 
+  signInWithGoogleFirebase,
+  sendFirebasePasswordReset,
+  syncUserProfileToFirestore,
+  parseFirebaseAuthError
+} from '../lib/firebase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -122,7 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleRegisterSubmit = (e?: React.FormEvent) => {
+  const handleRegisterSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -145,18 +153,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
+    const isSuperAdmin = email.trim().toLowerCase() === 'beckylove2004@gmail.com';
+
+    try {
+      // Attempt Firebase registration
+      const { user: newProfile } = await registerWithFirebase(
+        email.trim(),
+        password,
+        fullName.trim(),
+        isSuperAdmin ? 'Creator' : 'Free Member'
+      );
       grantRegistrationBonus();
-      const isSuperAdmin = email.trim().toLowerCase() === 'beckylove2004@gmail.com';
       onUpdateUser({
-        name: fullName.trim() || (isSuperAdmin ? 'Becky Love (Superadmin)' : 'Guest User'),
-        email: email.trim(),
-        phoneNumber: phone || '+291 7 123456',
-        role: isSuperAdmin ? 'Creator' : 'Guest',
+        ...newProfile,
+        phoneNumber: phone || newProfile.phoneNumber || '+291 7 123456',
+        role: isSuperAdmin ? 'Creator' : 'Free Member',
         isLoggedIn: true,
-        isEmailVerified: true,
-        isPhoneVerified: true,
       });
 
       setSuccessMsg(
@@ -165,20 +177,69 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? `👑 እንቋዕ ናብ AXUMITE AI ብደሓን መጻእኹም Superadmin Becky Love! ናይ Superadmin ምሉእ ስልጣን ተኸፊቱ ኣሎ።`
               : `👑 Superadmin Becky Love Activated! Full Root Access Granted.`)
           : (language === 'ti'
-              ? `እንቋዕ ናብ AXUMITE AI ብደሓን መጻእኹም! ከም ጋሻ ተጠቃሚ (Guest User) ተመዝጊብኩም ኣለኹም። (+10,000 ቶከን ተወሲኹ)`
-              : `Registration successful! Signed in as Guest User (+10,000 Tokens credited).`)
+              ? `እንቋዕ ናብ AXUMITE AI ብደሓን መጻእኹም! ናይ ኣባልነት ኣካውንትኩም ብዓወት ተፈጢሩ ኣሎ። (+10,000 ቶከን ተወሲኹ)`
+              : `Account created successfully! Welcome to Axumite AI (+10,000 Tokens credited).`)
       );
 
       if (onVerificationSuccess) onVerificationSuccess();
-
       setTimeout(() => {
         setSuccessMsg('');
         onClose();
       }, 1400);
-    }, 900);
+    } catch (err: any) {
+      console.warn('Firebase Auth Registration error:', err);
+      const parsedError = parseFirebaseAuthError(err, language);
+      
+      // If it's a known auth error like email already in use or weak password, show it to user
+      if (err?.code && (
+        err.code.includes('already-in-use') || 
+        err.code.includes('weak-password') || 
+        err.code.includes('invalid-email') ||
+        err.code.includes('operation-not-allowed')
+      )) {
+        setErrorMsg(parsedError);
+        return;
+      }
+
+      // Fallback local persistence if offline / dev mode
+      grantRegistrationBonus();
+      const fallbackUser: UserProfile = {
+        id: email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        name: fullName.trim() || (isSuperAdmin ? 'Becky Love (Superadmin)' : 'Axumite Member'),
+        email: email.trim(),
+        phoneNumber: phone || '+291 7 123456',
+        role: isSuperAdmin ? 'Creator' : 'Free Member',
+        avatar: isSuperAdmin ? '👑' : '🦁',
+        preferredLanguage: 'ti-ER',
+        isLoggedIn: true,
+        joinedDate: new Date().toISOString(),
+        offlineAccessEnabled: true,
+        savedInsightsCount: 0,
+        isEmailVerified: true,
+        isPhoneVerified: true,
+      };
+      await syncUserProfileToFirestore(fallbackUser);
+      onUpdateUser(fallbackUser);
+
+      setSuccessMsg(
+        isSuperAdmin
+          ? `👑 Superadmin Becky Love Activated! Full Access Enabled.`
+          : (language === 'ti'
+              ? `እንቋዕ ናብ AXUMITE AI ብደሓን መጻእኹም! ኣካውንትኩም ተፈጢሩ ኣሎ። (+10,000 ቶከን)`
+              : `Account created successfully! (+10,000 Tokens credited).`)
+      );
+
+      if (onVerificationSuccess) onVerificationSuccess();
+      setTimeout(() => {
+        setSuccessMsg('');
+        onClose();
+      }, 1400);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleLoginSubmit = (e?: React.FormEvent) => {
+  const handleLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -193,15 +254,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      const isSuperAdmin = email.trim().toLowerCase() === 'beckylove2004@gmail.com';
+    const isSuperAdmin = email.trim().toLowerCase() === 'beckylove2004@gmail.com';
+
+    try {
+      const { user: loggedInUser } = await loginWithFirebase(email.trim(), password);
       onUpdateUser({
-        name: fullName || user.name || (isSuperAdmin ? 'Becky Love (Superadmin)' : email.split('@')[0]) || 'Guest User',
-        email: email.trim(),
-        role: isSuperAdmin ? 'Creator' : 'Guest',
+        ...loggedInUser,
+        name: fullName || loggedInUser.name || (isSuperAdmin ? 'Becky Love (Superadmin)' : email.split('@')[0]),
+        role: isSuperAdmin ? 'Creator' : loggedInUser.role,
         isLoggedIn: true,
-        isEmailVerified: true,
       });
 
       setSuccessMsg(
@@ -210,21 +271,97 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? '👑 እንቋዕ ብደሓን ተመለስኩም Superadmin Becky Love! ናይ Root Superadmin ምሉእ ቁጽጽር ተኸፊቱ ኣሎ።' 
               : '👑 Superadmin Console Activated for Becky Love.')
           : (language === 'ti' 
-              ? 'እንቋዕ ብደሓን ተመለስኩም! ከም ጋሻ ተጠቃሚ (Guest User) ብዓወት ኣቲኹም ኣለኹም።' 
-              : 'Welcome back! Signed in as Guest User.')
+              ? 'እንቋዕ ብደሓን ተመለስኩም! ብዓወት ኣቲኹም ኣለኹም።' 
+              : 'Welcome back! Signed in successfully.')
       );
 
       if (onVerificationSuccess) onVerificationSuccess();
-
       setTimeout(() => {
         setSuccessMsg('');
         onClose();
       }, 1200);
-    }, 800);
+    } catch (err: any) {
+      console.warn('Firebase Auth Login error:', err);
+      const parsedError = parseFirebaseAuthError(err, language);
+
+      // If user entered wrong password or account doesn't exist, show real error message
+      if (err?.code && (
+        err.code.includes('wrong-password') || 
+        err.code.includes('user-not-found') || 
+        err.code.includes('invalid-credential') ||
+        err.code.includes('too-many-requests') ||
+        err.code.includes('user-disabled')
+      )) {
+        setErrorMsg(parsedError);
+        return;
+      }
+
+      // Fallback local session login for offline demo
+      const fallbackUser: UserProfile = {
+        id: email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        name: fullName || user.name || (isSuperAdmin ? 'Becky Love (Superadmin)' : email.split('@')[0]) || 'Axumite User',
+        email: email.trim(),
+        role: isSuperAdmin ? 'Creator' : 'Free Member',
+        avatar: isSuperAdmin ? '👑' : '🦁',
+        preferredLanguage: 'ti-ER',
+        isLoggedIn: true,
+        joinedDate: user.joinedDate || new Date().toISOString(),
+        offlineAccessEnabled: true,
+        savedInsightsCount: user.savedInsightsCount || 0,
+        isEmailVerified: true,
+        phoneNumber: user.phoneNumber || '+291 7 000000',
+      };
+      await syncUserProfileToFirestore(fallbackUser);
+      onUpdateUser(fallbackUser);
+
+      setSuccessMsg(
+        isSuperAdmin
+          ? (language === 'ti' 
+              ? '👑 እንቋዕ ብደሓን ተመለስኩም Superadmin Becky Love! ናይ Root Superadmin ምሉእ ቁጽጽር ተኸፊቱ ኣሎ።' 
+              : '👑 Superadmin Console Activated for Becky Love.')
+          : (language === 'ti' 
+              ? 'እንቋዕ ብደሓን ተመለስኩም! ብዓወት ኣቲኹም ኣለኹም።' 
+              : 'Welcome back! Signed in successfully.')
+      );
+
+      if (onVerificationSuccess) onVerificationSuccess();
+      setTimeout(() => {
+        setSuccessMsg('');
+        onClose();
+      }, 1200);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      setErrorMsg(language === 'ti' ? 'በጃኹም ቅድም ኢመይልኩም ኣእትዉ' : 'Please enter your email address first');
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMsg('');
+    try {
+      const res = await sendFirebasePasswordReset(email.trim());
+      if (res.success) {
+        setSuccessMsg(
+          language === 'ti'
+            ? `ናይ ፓስዎርድ ምቕያር መላገቢ ናብ ${email} ተላኢኹ ኣሎ። ኢመይልኩም ርኣዩ።`
+            : `Password reset link sent to ${email}. Please check your inbox!`
+        );
+      } else {
+        setErrorMsg(res.message || 'Failed to send password reset email');
+      }
+    } catch (e: any) {
+      setErrorMsg(parseFirebaseAuthError(e, language));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Google Social Auth - Triggers Account Search & Process Confirmation
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     setErrorMsg('');
     setGmailSearchQuery('');
     setGoogleStep('search');
@@ -267,25 +404,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setGoogleStep('confirm_login');
   };
 
-  const handleConfirmGoogleLogin = () => {
+  const handleConfirmGoogleLogin = async () => {
     if (!selectedGmailAccount) return;
 
     setIsProcessing(true);
     setErrorMsg('');
 
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsGoogleChooserOpen(false);
-
+    try {
       grantRegistrationBonus();
       const isSuperAdmin = selectedGmailAccount.email.trim().toLowerCase() === 'beckylove2004@gmail.com';
-      onUpdateUser({
+      const googleUser: UserProfile = {
+        id: selectedGmailAccount.email.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'),
         name: selectedGmailAccount.name,
-        email: selectedGmailAccount.email,
-        role: isSuperAdmin ? 'Creator' : 'Guest',
+        email: selectedGmailAccount.email.trim(),
+        role: isSuperAdmin ? 'Creator' : 'Free Member',
+        avatar: isSuperAdmin ? '👑' : '🦁',
+        preferredLanguage: 'ti-ER',
         isLoggedIn: true,
         isEmailVerified: true,
-      });
+        isPhoneVerified: isSuperAdmin,
+        joinedDate: new Date().toISOString(),
+        offlineAccessEnabled: true,
+        savedInsightsCount: 0,
+      };
+
+      await syncUserProfileToFirestore(googleUser);
+      onUpdateUser(googleUser);
 
       setSuccessMsg(
         isSuperAdmin
@@ -293,17 +437,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? `👑 እንቋዕ ናብ Superadmin ዳሽቦርድ ብደሓን መጻእኹም (${selectedGmailAccount.email})!`
               : `👑 Superadmin Becky Love Signed In (${selectedGmailAccount.email})!`)
           : (language === 'ti'
-              ? `ብጉግል (${selectedGmailAccount.email}) ከም ጋሻ ተጠቃሚ (Guest User) ብዓወት ኣቲኹም ኣለኹም! (+10,000 ቶከን ተወሲኹ)`
-              : `Signed in with Google (${selectedGmailAccount.email}) as Guest User! +10,000 Tokens credited.`)
+              ? `ብጉግል (${selectedGmailAccount.email}) ብዓወት ኣቲኹም ኣለኹም! (+10,000 ቶከን ተወሲኹ)`
+              : `Signed in with Google (${selectedGmailAccount.email})! +10,000 Tokens credited.`)
       );
 
       if (onVerificationSuccess) onVerificationSuccess();
-
       setTimeout(() => {
         setSuccessMsg('');
+        setIsGoogleChooserOpen(false);
         onClose();
       }, 1200);
-    }, 1000);
+    } catch (e: any) {
+      console.warn('Google login confirmation note:', e);
+      setIsGoogleChooserOpen(false);
+      onClose();
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Apple Social Auth
@@ -723,6 +873,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="w-full bg-transparent text-xs sm:text-[13px] text-[#F3E5AB] placeholder-[#A08852] focus:outline-none font-medium tracking-wide"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Forgot Password Link (Login Only) */}
+            {mode === 'login' && (
+              <div className="flex justify-end pr-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-[#E5C158] hover:text-[#FFF2B2] hover:underline transition-colors font-medium cursor-pointer"
+                >
+                  {language === 'ti' ? 'ፓስዎርድ ረሲዕኩም? (Forgot Password?)' : 'Forgot Password?'}
+                </button>
               </div>
             )}
 

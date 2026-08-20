@@ -1,15 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { 
   X, FileText, Upload, Sparkles, CheckCircle2, Copy, Check, 
-  FileCode, RefreshCw, MessageSquare, ArrowRight, Download, BookOpen, AlertCircle
+  FileCode, RefreshCw, MessageSquare, ArrowRight, Download, BookOpen, AlertCircle, HardDrive
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { uploadUserFileToFirestore } from '../lib/firebase';
 
 interface DocumentAiModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile;
   onNavigateToChat?: (prompt: string) => void;
+  onOpenVault?: () => void;
 }
 
 export const DocumentAiModal: React.FC<DocumentAiModalProps> = ({
@@ -17,6 +19,7 @@ export const DocumentAiModal: React.FC<DocumentAiModalProps> = ({
   onClose,
   user,
   onNavigateToChat,
+  onOpenVault,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -25,6 +28,7 @@ export const DocumentAiModal: React.FC<DocumentAiModalProps> = ({
   const [resultText, setResultText] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [customQuestion, setCustomQuestion] = useState('');
+  const [cloudSaved, setCloudSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -40,12 +44,31 @@ export const DocumentAiModal: React.FC<DocumentAiModalProps> = ({
     setFile(selectedFile);
     setIsProcessing(true);
     setResultText('');
+    setCloudSaved(false);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = (e.target?.result as string) || '';
       setFileContent(text.slice(0, 10000)); // Cap for browser performance
       
+      // Persist to user's Firestore file vault
+      try {
+        await uploadUserFileToFirestore({
+          userId: user.id || user.email.replace(/[^a-z0-9]/g, '_'),
+          userEmail: user.email,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          fileType: selectedFile.type || 'text/plain',
+          category: 'document',
+          fileData: text.startsWith('data:') ? text : `data:text/plain;base64,${btoa(unescape(encodeURIComponent(text.slice(0, 50000))))}`,
+          description: `Document uploaded and indexed for AI analysis on ${new Date().toLocaleDateString()}`,
+          tags: ['document', 'document-ai', selectedFile.name.split('.').pop() || 'doc']
+        });
+        setCloudSaved(true);
+      } catch (err) {
+        console.warn('Document firestore save note:', err);
+      }
+
       // Generate initial intelligent summary simulation / processing
       setTimeout(() => {
         setIsProcessing(false);
@@ -56,12 +79,8 @@ export const DocumentAiModal: React.FC<DocumentAiModalProps> = ({
     if (selectedFile.type.includes('text') || selectedFile.name.endsWith('.txt') || selectedFile.name.endsWith('.md')) {
       reader.readAsText(selectedFile);
     } else {
-      // PDF or binary mock reader representation
-      setFileContent(`[Document: ${selectedFile.name}, Size: ${(selectedFile.size / 1024).toFixed(1)} KB]\nUploaded document content extracted successfully for analysis.`);
-      setTimeout(() => {
-        setIsProcessing(false);
-        generateAnalysis(selectedFile.name, 'Document content loaded', analysisType);
-      }, 1400);
+      // DataURL for pdf / binaries
+      reader.readAsDataURL(selectedFile);
     }
   };
 

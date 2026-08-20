@@ -350,6 +350,17 @@ How can I assist you today?
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(msg.content.substring(0, 300));
           utterance.lang = 'ti-ER';
+          utterance.rate = 0.95;
+          const voices = window.speechSynthesis.getVoices();
+          const hornVoice = voices.find(
+            (v) =>
+              v.lang.startsWith('ti') ||
+              v.lang.startsWith('am') ||
+              v.name.toLowerCase().includes('tigrinya') ||
+              v.name.toLowerCase().includes('amharic')
+          );
+          if (hornVoice) utterance.voice = hornVoice;
+
           utterance.onend = () => setPlayingAudioId(null);
           utterance.onerror = () => setPlayingAudioId(null);
           window.speechSynthesis.speak(utterance);
@@ -373,6 +384,8 @@ How can I assist you today?
         // Fallback to SpeechSynthesis if raw PCM browser playback fails
         if ('speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(msg.content.substring(0, 300));
+          utterance.lang = 'ti-ER';
+          utterance.rate = 0.95;
           utterance.onend = () => setPlayingAudioId(null);
           window.speechSynthesis.speak(utterance);
           setPlayingAudioId(msg.id);
@@ -382,6 +395,8 @@ How can I assist you today?
       console.warn('Backend TTS notice, using fallback synthesis:', err);
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(msg.content.substring(0, 300));
+        utterance.lang = 'ti-ER';
+        utterance.rate = 0.95;
         utterance.onend = () => setPlayingAudioId(null);
         window.speechSynthesis.speak(utterance);
         setPlayingAudioId(msg.id);

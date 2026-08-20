@@ -132,13 +132,93 @@ export interface PaymentTransaction {
   planName: string;
   billingCycle: 'Monthly' | 'Annual' | 'One-time';
   amount: number;
-  currency: 'ERN' | 'ETB' | 'USD' | 'EUR';
+  currency: 'ERN' | 'ETB' | 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'JPY' | 'CHF';
   paymentMethod: string;
   status: 'Completed' | 'Pending' | 'Failed' | 'Refunded';
   timestamp: string;
   tokensCredited: number;
   invoiceNumber: string;
   notes?: string;
+  receiptUrl?: string;
+  failureReason?: string;
+}
+
+export type SupportedCurrency = 'USD' | 'EUR' | 'GBP' | 'CAD' | 'AUD' | 'ERN' | 'ETB' | 'JPY' | 'CHF';
+
+export interface DatabaseUserAccount {
+  id: string;
+  name: string;
+  email: string;
+  account_type: 'free' | 'premium' | 'enterprise' | 'lifetime';
+  created_at: string;
+  stripe_customer_id?: string;
+  role?: string;
+}
+
+export interface DatabaseSubscriptionRecord {
+  id: string;
+  user_id: string;
+  user_email: string;
+  provider_customer_id: string;
+  provider_subscription_id: string;
+  plan: 'free' | 'pro_monthly' | 'pro_yearly' | 'enterprise_monthly' | 'enterprise_yearly' | 'lifetime_pass';
+  plan_name: string;
+  status: 'active' | 'trialing' | 'canceled' | 'past_due' | 'unpaid' | 'incomplete' | 'expired';
+  billing_cycle: 'monthly' | 'yearly' | 'one_time' | 'free';
+  amount: number;
+  currency: SupportedCurrency;
+  start_date: string;
+  end_date: string;
+  renewal_date: string;
+  cancel_at_period_end: boolean;
+  trial_end_date?: string | null;
+  created_at: string;
+  updated_at: string;
+  entitlement_signature?: string;
+}
+
+export interface DatabasePaymentRecord {
+  id: string;
+  user_id: string;
+  user_email: string;
+  provider_payment_id: string;
+  amount: number;
+  currency: SupportedCurrency;
+  status: 'succeeded' | 'pending' | 'failed' | 'refunded';
+  payment_date: string;
+  receipt_url: string;
+  plan_id: string;
+  invoice_number: string;
+  payment_method_label: string;
+  card_last4?: string;
+  failure_reason?: string;
+  refund_amount?: number;
+  refund_date?: string;
+  created_at: string;
+}
+
+export interface AdminPaymentMetrics {
+  totalUsers: number;
+  freeUsers: number;
+  premiumUsers: number;
+  activeSubscriptions: number;
+  cancelledSubscriptions: number;
+  successfulPayments: number;
+  failedPayments: number;
+  totalRevenueUSD: number;
+  totalRefundsUSD: number;
+  recentTransactions: DatabasePaymentRecord[];
+}
+
+export interface PaymentTestResult {
+  id: string;
+  testName: string;
+  description: string;
+  passed: boolean;
+  latencyMs: number;
+  details: string;
+  responseSnippet?: string;
+  timestamp: string;
 }
 
 export interface CustomerRecord {
@@ -331,7 +411,7 @@ export interface AppNotification {
   titleEn: string;
   bodyTi: string;
   bodyEn: string;
-  category: 'scholarship' | 'system_update' | 'security' | 'feature';
+  category: 'scholarship' | 'system_update' | 'security' | 'feature' | 'payment_failed' | 'payment';
   timestamp: string;
   isoDate: string;
   read: boolean;
@@ -342,12 +422,24 @@ export interface AppNotification {
   actionLabelEn?: string;
   badgeText?: string;
   icon?: string;
+  actionType?: 'navigate_tab' | 'external_url' | 'open_scholarship' | 'open_system_status' | 'open_payment';
+  targetTab?: string;
+  paymentDetails?: {
+    planName?: string;
+    amount?: number;
+    currency?: string;
+    failureReason?: string;
+    invoiceNumber?: string;
+    last4?: string;
+    paymentMethod?: string;
+  };
 }
 
 export interface NotificationPreferences {
   enableWebPush: boolean;
   enableScholarships: boolean;
   enableSystemUpdates: boolean;
+  enablePaymentAlerts: boolean;
   enableAudioChime: boolean;
   preferredLanguage: 'bilingual' | 'ti' | 'en';
 }
@@ -897,5 +989,40 @@ export interface CulturalPoem {
   historicalContext: string;
   literaryStructure: string;
 }
+
+export type FileCategory = 'document' | 'image' | 'audio' | 'geez_script' | 'video' | 'other';
+
+export interface UserFileRecord {
+  id: string;
+  userId: string;
+  userEmail: string;
+  fileName: string;
+  fileSize: number; // in bytes
+  fileType: string; // mime type (e.g. application/pdf, image/jpeg, text/plain)
+  category: FileCategory;
+  downloadUrl?: string; // Firebase Storage download URL
+  storagePath?: string; // Storage path in bucket (e.g. users/{userId}/files/{fileId}_{fileName})
+  fileData?: string; // base64 or Data URL for preview and download
+  description?: string;
+  uploadDate: string; // ISO String
+  updatedAt?: string;
+  tags?: string[];
+  isEncrypted?: boolean;
+}
+
+export interface UserStorageStats {
+  usedBytes: number;
+  quotaBytes: number;
+  fileCount: number;
+  categoryBreakdown: {
+    document: number;
+    image: number;
+    audio: number;
+    geez_script: number;
+    video: number;
+    other: number;
+  };
+}
+
 
 

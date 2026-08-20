@@ -430,14 +430,28 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
     },
   ], []);
 
-  // Text-to-speech audio feedback
+  // Text-to-speech audio feedback in Tigrinya
   const speakFeedback = (text: string) => {
     if (!speechEnabled || !window.speechSynthesis) return;
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
+      utterance.lang = 'ti-ER';
+      utterance.rate = 0.95;
+      utterance.pitch = 1.05;
+
+      const voices = window.speechSynthesis.getVoices();
+      const hornVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('ti') ||
+          v.lang.startsWith('am') ||
+          v.name.toLowerCase().includes('tigrinya') ||
+          v.name.toLowerCase().includes('amharic')
+      );
+      if (hornVoice) {
+        utterance.voice = hornVoice;
+      }
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.error('Speech synthesis error:', e);

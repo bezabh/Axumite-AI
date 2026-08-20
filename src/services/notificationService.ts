@@ -7,11 +7,40 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enableWebPush: true,
   enableScholarships: true,
   enableSystemUpdates: true,
+  enablePaymentAlerts: true,
   enableAudioChime: true,
   preferredLanguage: 'bilingual',
 };
 
+export const NOTIFICATION_EVENT_NAME = 'axumite:new_notification';
+
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif_payment_failed_alert',
+    titleTi: '⚠️ ናይ ኣባልነት ክፍሊት ኣይተሳኽዐን (Subscription Payment Failed)',
+    titleEn: '⚠️ Subscription Payment Failed - Action Required',
+    bodyTi: 'ናይ ልዑላዊ AI ፕሮ ኣባልነት ክፍሊትኩም ኣይተሳኽዐን (Card declined or insufficient funds)። ብኽብረትኩም ናብ ክፍሊት ምሕደራ ብምእታው ናይ ካርድ ወይ ናይ ባንክ ሓበሬታኹም ኣሐድሱ።',
+    bodyEn: 'Your subscription recurring billing failed to process. Please visit Payment Management to update your billing info and maintain continuous AI Pro privileges.',
+    category: 'payment_failed',
+    timestamp: 'ሕጂ • Just now',
+    isoDate: new Date().toISOString(),
+    read: false,
+    urgency: 'urgent',
+    actionLabelTi: 'ናይ ክፍሊት ሓበሬታ ኣሐድስ',
+    actionLabelEn: 'Update Billing Info',
+    badgeText: 'Payment Failed',
+    actionType: 'open_payment',
+    targetTab: 'payment',
+    paymentDetails: {
+      planName: 'ልዑላዊ AI ፕሮ (Sovereign Pro)',
+      amount: 79.99,
+      currency: 'USD',
+      failureReason: 'Card issuer declined authorization / Insufficient funds.',
+      invoiceNumber: 'INV-FAILED-2026',
+      last4: '4242',
+      paymentMethod: 'Stripe Credit Card (•••• 4242)',
+    },
+  },
   {
     id: 'notif_scholarship_daad_2026',
     titleTi: '🎓 ሓድሽ ዕድል ስኮላርሺፕ፡ DAAD ጀርመን 2026/27 ምሉእ ብምሉእ ዝተኸፍለ',
@@ -238,6 +267,7 @@ export function triggerBrowserPushNotification(
         category: notif.category,
         scholarshipId: notif.scholarshipId,
         actionUrl: notif.actionUrl,
+        targetTab: notif.targetTab,
       },
     });
 
@@ -255,3 +285,90 @@ export function triggerBrowserPushNotification(
     return false;
   }
 }
+
+// Create a structured payment failed notification
+export function createPaymentFailedNotification(params?: {
+  planName?: string;
+  amount?: number;
+  currency?: string;
+  failureReason?: string;
+  invoiceNumber?: string;
+  last4?: string;
+  paymentMethod?: string;
+}): AppNotification {
+  const plan = params?.planName || 'ልዑላዊ AI ፕሮ (Sovereign Pro)';
+  const amount = params?.amount !== undefined ? params.amount : 79.99;
+  const currency = params?.currency || 'USD';
+  const reason = params?.failureReason || 'Card declined or insufficient funds.';
+  const last4 = params?.last4 || '4242';
+  const method = params?.paymentMethod || `Card ending in •••• ${last4}`;
+  const invNumber = params?.invoiceNumber || `INV-FAIL-${Date.now().toString().slice(-6)}`;
+
+  return {
+    id: `notif_pay_fail_${Date.now()}`,
+    titleTi: '⚠️ ናይ ኣባልነት ክፍሊት ኣይተሳኽዐን (Subscription Payment Failed)',
+    titleEn: '⚠️ Subscription Payment Failed - Action Required',
+    bodyTi: `ናይ ${plan} (${currency} ${amount}) ክፍሊትኩም ኣይተሳኽዐን [${reason}]። በጃኹም ናብ ክፍሊት ምሕደራ ብምኻድ ናይ ክፍሊት ሓበሬታኹም ኣሐድሱ።`,
+    bodyEn: `Your payment of ${currency} ${amount} for ${plan} failed (${reason}). Please update your billing method to prevent interruption of your Sovereign Pro benefits.`,
+    category: 'payment_failed',
+    timestamp: 'ሕጂ • Just now',
+    isoDate: new Date().toISOString(),
+    read: false,
+    urgency: 'urgent',
+    actionLabelTi: 'ናይ ክፍሊት ሓበሬታ ኣሐድስ',
+    actionLabelEn: 'Update Billing Info',
+    badgeText: 'Payment Action Required',
+    actionType: 'open_payment',
+    targetTab: 'payment',
+    paymentDetails: {
+      planName: plan,
+      amount,
+      currency,
+      failureReason: reason,
+      invoiceNumber: invNumber,
+      last4,
+      paymentMethod: method,
+    },
+  };
+}
+
+// Dispatch an in-app notification across active components and persistence
+export function dispatchAppNotification(notif: AppNotification): void {
+  // 1. Store in localStorage
+  const existing = getStoredNotifications();
+  const updated = [notif, ...existing.filter((n) => n.id !== notif.id)];
+  saveStoredNotifications(updated);
+
+  // 2. Play audio chime if enabled
+  const prefs = getStoredPreferences();
+  if (prefs.enableAudioChime) {
+    playGoldenNotificationChime();
+  }
+
+  // 3. Trigger Web Push if enabled
+  if (prefs.enableWebPush) {
+    triggerBrowserPushNotification(notif, prefs.preferredLanguage === 'ti' ? 'ti' : 'en');
+  }
+
+  // 4. Dispatch custom DOM event for active UI components
+  if (typeof window !== 'undefined') {
+    const event = new CustomEvent(NOTIFICATION_EVENT_NAME, { detail: notif });
+    window.dispatchEvent(event);
+  }
+}
+
+// Trigger payment failure alert
+export function triggerPaymentFailedAlert(params?: {
+  planName?: string;
+  amount?: number;
+  currency?: string;
+  failureReason?: string;
+  invoiceNumber?: string;
+  last4?: string;
+  paymentMethod?: string;
+}): AppNotification {
+  const notif = createPaymentFailedNotification(params);
+  dispatchAppNotification(notif);
+  return notif;
+}
+

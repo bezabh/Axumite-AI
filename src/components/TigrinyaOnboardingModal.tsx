@@ -109,8 +109,18 @@ export const TigrinyaOnboardingModal: React.FC<TigrinyaOnboardingModalProps> = (
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(activeStep.narrationTi);
-    utterance.lang = 'ti-ET';
+    utterance.lang = 'ti-ER';
     utterance.rate = 0.95;
+
+    const voices = window.speechSynthesis.getVoices();
+    const hornVoice = voices.find(
+      (v) =>
+        v.lang.startsWith('ti') ||
+        v.lang.startsWith('am') ||
+        v.name.toLowerCase().includes('tigrinya') ||
+        v.name.toLowerCase().includes('amharic')
+    );
+    if (hornVoice) utterance.voice = hornVoice;
 
     utterance.onstart = () => setIsPlayingAudio(true);
     utterance.onend = () => setIsPlayingAudio(false);

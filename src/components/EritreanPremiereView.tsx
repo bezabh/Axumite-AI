@@ -17,6 +17,7 @@ import { WrittenTranslationModal } from './WrittenTranslationModal';
 import { WrittenChatModal } from './WrittenChatModal';
 import { ScholarshipModal } from './ScholarshipModal';
 import { JobSearchModal } from './JobSearchModal';
+import { DailyWisdomCard } from './DailyWisdomCard';
 
 interface EritreanPremiereViewProps {
   activeTab: AppTab;
@@ -353,6 +354,11 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
           </div>
 
         </div>
+
+        {/* ========================================================================= */}
+        {/* 4.1. DAILY WISDOM FROM ANCIENT AXUMITE MANUSCRIPTS                        */}
+        {/* ========================================================================= */}
+        <DailyWisdomCard onSaveInsight={onSaveInsight} />
 
         {/* ========================================================================= */}
         {/* 4.5. FEATURED SCHOLARSHIPS & JOB SEARCH HERO BANNERS                       */}

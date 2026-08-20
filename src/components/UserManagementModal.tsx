@@ -13,6 +13,7 @@ import {
   GOLD_PALETTE, 
   THEME_HUE_PALETTE 
 } from '../context/BrandingThemeContext';
+import { logoutFromFirebase } from '../lib/firebase';
 
 interface UserManagementModalProps {
   isOpen: boolean;
@@ -599,13 +600,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         <div className="pt-4 space-y-4">
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (!user.isLoggedIn && onOpenAuthModal) {
                 onClose();
                 onOpenAuthModal('login');
               } else {
-                onUpdateUser({ isLoggedIn: !user.isLoggedIn });
-                showToast(user.isLoggedIn ? 'Signed out' : 'Signed in as guest');
+                await logoutFromFirebase();
+                onUpdateUser({ 
+                  isLoggedIn: false,
+                  id: 'usr_guest_001',
+                  name: 'ጋሻ (Guest User)',
+                  email: 'guest@axumite.ai',
+                  role: 'Guest'
+                });
+                showToast('Signed out of Firebase Session');
               }
             }}
             className="w-full py-3.5 px-4 bg-white hover:bg-blue-50 border border-blue-200 text-blue-600 font-bold text-sm rounded-2xl shadow-sm flex items-center justify-center space-x-2 transition-all cursor-pointer active:scale-[0.98]"
