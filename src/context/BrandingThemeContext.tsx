@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type GoldIntensity = 'soft' | 'balanced' | 'rich' | 'pure-axum';
+export type UIThemeScheme = 'high-contrast-gold' | 'soft-ambient-gold' | 'balanced-gold';
 export type ThemeHue = 
   | 'royal-axum' 
   | 'redsea-emerald' 
@@ -10,6 +11,7 @@ export type ThemeHue =
   | 'obsidian-monolith';
 
 export interface BrandingConfig {
+  themeScheme: UIThemeScheme;
   goldIntensity: GoldIntensity;
   themeHue: ThemeHue;
   goldShimmerEffect: boolean;
@@ -19,6 +21,7 @@ export interface BrandingConfig {
 
 export interface BrandingThemeContextType {
   branding: BrandingConfig;
+  setThemeScheme: (scheme: UIThemeScheme) => void;
   setGoldIntensity: (intensity: GoldIntensity) => void;
   setThemeHue: (hue: ThemeHue) => void;
   setGoldShimmerEffect: (enabled: boolean) => void;
@@ -34,6 +37,7 @@ export interface BrandingThemeContextType {
 }
 
 const DEFAULT_BRANDING: BrandingConfig = {
+  themeScheme: 'balanced-gold',
   goldIntensity: 'balanced',
   themeHue: 'royal-axum',
   goldShimmerEffect: true,
@@ -141,12 +145,50 @@ export const BrandingThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     root.style.setProperty('--axum-hue-primary', hueData.primary);
     root.style.setProperty('--axum-shimmer-active', branding.goldShimmerEffect ? '1' : '0');
 
+    // Remove prior theme classes
+    root.classList.remove('theme-high-contrast-gold', 'theme-soft-ambient-gold', 'theme-balanced-gold');
+    if (branding.themeScheme === 'high-contrast-gold') {
+      root.classList.add('theme-high-contrast-gold');
+    } else if (branding.themeScheme === 'soft-ambient-gold') {
+      root.classList.add('theme-soft-ambient-gold');
+    } else {
+      root.classList.add('theme-balanced-gold');
+    }
+
     if (branding.borderGlow) {
       root.classList.add('axum-border-glow-enabled');
     } else {
       root.classList.remove('axum-border-glow-enabled');
     }
   }, [branding]);
+
+  const setThemeScheme = (scheme: UIThemeScheme) => {
+    if (scheme === 'high-contrast-gold') {
+      setBranding((prev) => ({
+        ...prev,
+        themeScheme: 'high-contrast-gold',
+        goldIntensity: 'pure-axum',
+        goldShimmerEffect: true,
+        borderGlow: true,
+      }));
+    } else if (scheme === 'soft-ambient-gold') {
+      setBranding((prev) => ({
+        ...prev,
+        themeScheme: 'soft-ambient-gold',
+        goldIntensity: 'soft',
+        goldShimmerEffect: false,
+        borderGlow: false,
+      }));
+    } else {
+      setBranding((prev) => ({
+        ...prev,
+        themeScheme: 'balanced-gold',
+        goldIntensity: 'balanced',
+        goldShimmerEffect: true,
+        borderGlow: true,
+      }));
+    }
+  };
 
   const setGoldIntensity = (intensity: GoldIntensity) => {
     setBranding((prev) => ({ ...prev, goldIntensity: intensity }));
@@ -183,6 +225,7 @@ export const BrandingThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     <BrandingThemeContext.Provider
       value={{
         branding,
+        setThemeScheme,
         setGoldIntensity,
         setThemeHue,
         setGoldShimmerEffect,

@@ -21,6 +21,7 @@ import {
 import {
   BarChart3,
   TrendingUp,
+  TrendingDown,
   PieChart as PieIcon,
   Activity,
   BookmarkCheck,
@@ -31,6 +32,7 @@ import {
   ShieldCheck,
   Clock,
   ArrowUpRight,
+  ArrowDownRight,
   Download,
   Filter,
   RefreshCw,
@@ -43,10 +45,20 @@ import {
   ArrowRight,
   X,
   Sliders,
-  Check
+  Check,
+  Bell,
+  AlertTriangle,
+  DollarSign,
+  SlidersHorizontal,
+  Volume2,
+  MessageSquareText
 } from 'lucide-react';
 import { UserProfile, SavedItem } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { AdminRevenueChurnChart } from './AdminRevenueChurnChart';
+import { UserActivityDashboard } from './UserActivityDashboard';
+import { triggerChurnAlert } from '../services/notificationService';
+import { getStoredAppConfig, saveStoredAppConfig } from '../lib/permissions';
 
 export type TimeRangePreset = '24h' | '7d' | '30d' | '90d' | 'custom';
 
@@ -105,6 +117,99 @@ export const Analytics: React.FC<AnalyticsProps> = ({
     return isNaN(diffDays) || diffDays < 1 ? 1 : diffDays;
   }, [timeRange, startDate, endDate]);
 
+  // Formatted Date Label Display
+  const formattedDateRangeLabel = useMemo(() => {
+    try {
+      const startObj = new Date(startDate);
+      const endObj = new Date(endDate);
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+      const startFormatted = startObj.toLocaleDateString(language === 'ti' ? 'en-US' : 'en-US', options);
+      const endFormatted = endObj.toLocaleDateString(language === 'ti' ? 'en-US' : 'en-US', options);
+      return `${startFormatted} – ${endFormatted}`;
+    } catch {
+      return `${startDate} – ${endDate}`;
+    }
+  }, [startDate, endDate, language]);
+
+  // Analytics Tab State
+  const [analyticsTab, setAnalyticsTab] = useState<'activity_dashboard' | 'telemetry' | 'mrr_churn' | 'churn_config'>('activity_dashboard');
+
+  // Churn Push Notification Configuration State
+  const [enableChurnAlert, setEnableChurnAlert] = useState<boolean>(() => {
+    return getStoredAppConfig().enableChurnAlert ?? true;
+  });
+  const [churnThreshold, setChurnThreshold] = useState<number>(() => {
+    return getStoredAppConfig().churnThreshold ?? 3.0;
+  });
+  const [churnToastMessage, setChurnToastMessage] = useState<string | null>(null);
+  const [isSimulatingSpike, setIsSimulatingSpike] = useState(false);
+
+  // Dynamic calculated churn rate based on active timeframe
+  const calculatedChurnRate = useMemo(() => {
+    if (timeRange === '24h') return 0.8;
+    if (timeRange === '7d') return 1.5;
+    if (timeRange === '30d') return 1.8;
+    if (timeRange === '90d') return 2.4;
+    return 1.9;
+  }, [timeRange]);
+
+  const showChurnToast = (msg: string) => {
+    setChurnToastMessage(msg);
+    setTimeout(() => setChurnToastMessage(null), 3500);
+  };
+
+  const handleUpdateChurnToggle = (enabled: boolean) => {
+    setEnableChurnAlert(enabled);
+    const currentConfig = getStoredAppConfig();
+    const updated = { ...currentConfig, enableChurnAlert: enabled };
+    saveStoredAppConfig(updated);
+    showChurnToast(
+      enabled
+        ? (language === 'ti' ? 'ናይ ፑሽ ምልክታ (Churn Alert) በርሁ ኣሎ!' : 'Churn threshold push notifications enabled.')
+        : (language === 'ti' ? 'ናይ ፑሽ ምልክታ ጠፊኡ ኣሎ።' : 'Churn threshold push notifications disabled.')
+    );
+  };
+
+  const handleUpdateChurnThreshold = (val: number) => {
+    const clamped = Math.max(0.5, Math.min(15.0, Number(val.toFixed(1))));
+    setChurnThreshold(clamped);
+    const currentConfig = getStoredAppConfig();
+    const updated = { ...currentConfig, churnThreshold: clamped };
+    saveStoredAppConfig(updated);
+  };
+
+  const handleTriggerTestPushAlert = () => {
+    triggerChurnAlert({
+      churnRate: Math.max(calculatedChurnRate, churnThreshold + 0.6),
+      threshold: churnThreshold,
+      period: `Rolling ${activeDayCount} Days (${formattedDateRangeLabel})`,
+      lostMRR: 850,
+      affectedSubscribers: 18,
+    });
+    showChurnToast(
+      language === 'ti'
+        ? 'ናይ ፑሽ ፈተነ ምልክታ (Churn Alert) ብትክክል ተላኢኹ!'
+        : 'Proactive Push Alert dispatched via notificationService!'
+    );
+  };
+
+  const handleSimulateBreach = (spikeValue: number = 4.2) => {
+    setIsSimulatingSpike(true);
+    triggerChurnAlert({
+      churnRate: spikeValue,
+      threshold: churnThreshold,
+      period: 'Simulated 30-Day Churn Surge',
+      lostMRR: 1250,
+      affectedSubscribers: 28,
+    });
+    showChurnToast(
+      language === 'ti'
+        ? `ምልክታ ምቁራጽ: ${spikeValue}% ምቁራጽ ካብቲ ዝተመደበ ደረት ${churnThreshold}% በሊጹ!`
+        : `Breach Detected! Churn rate reached ${spikeValue}%, exceeding ${churnThreshold}% ceiling.`
+    );
+    setTimeout(() => setIsSimulatingSpike(false), 2000);
+  };
+
   // Handler for preset button clicks
   const handleSelectPreset = (preset: TimeRangePreset) => {
     setTimeRange(preset);
@@ -136,20 +241,6 @@ export const Analytics: React.FC<AnalyticsProps> = ({
       setIsCustomPickerOpen(true);
     }
   };
-
-  // Formatted Date Label Display
-  const formattedDateRangeLabel = useMemo(() => {
-    try {
-      const startObj = new Date(startDate);
-      const endObj = new Date(endDate);
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
-      const startFormatted = startObj.toLocaleDateString(language === 'ti' ? 'en-US' : 'en-US', options);
-      const endFormatted = endObj.toLocaleDateString(language === 'ti' ? 'en-US' : 'en-US', options);
-      return `${startFormatted} – ${endFormatted}`;
-    } catch {
-      return `${startDate} – ${endDate}`;
-    }
-  }, [startDate, endDate, language]);
 
   // Scaled Feature Usage Data depending on selected timeframe
   const dynamicFeatureUsageData = useMemo(() => {
@@ -361,6 +452,16 @@ export const Analytics: React.FC<AnalyticsProps> = ({
   return (
     <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 text-slate-100 animate-fade-in">
       
+      {/* Toast Feedback */}
+      {churnToastMessage && (
+        <div className="fixed top-24 right-6 z-50 px-4 py-3 rounded-2xl bg-[#171128] border-2 border-amber-400 text-amber-200 shadow-2xl flex items-center space-x-3 text-xs font-bold animate-in fade-in slide-in-from-top-3">
+          <div className="p-1 rounded-lg bg-amber-500/20 text-amber-300">
+            <Bell className="w-4 h-4" />
+          </div>
+          <span>{churnToastMessage}</span>
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* TOP HEADER & INTERACTIVE DATE RANGE PICKER BAR                           */}
       {/* ========================================================================= */}
@@ -440,6 +541,85 @@ export const Analytics: React.FC<AnalyticsProps> = ({
           </button>
         </div>
 
+      </div>
+
+      {/* Sub-Navigation Tabs */}
+      <div className="bg-[#0E091D] border border-[#3E2E5A] rounded-2xl p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-xl">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setAnalyticsTab('activity_dashboard')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              analyticsTab === 'activity_dashboard'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <MessageSquareText className="w-4 h-4" />
+            <span>{language === 'ti' ? 'ናይ 30 መዓልቲ ምንቅስቓስ ተጠቃሚ' : '30-Day User Activity'}</span>
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px]">30d</span>
+          </button>
+
+          <button
+            onClick={() => setAnalyticsTab('telemetry')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              analyticsTab === 'telemetry'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>{language === 'ti' ? 'ቴሌሜትሪን ኣጠቓቕማን' : 'System Usage & NLP Telemetry'}</span>
+          </button>
+
+          <button
+            onClick={() => setAnalyticsTab('mrr_churn')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              analyticsTab === 'mrr_churn'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>{language === 'ti' ? 'ናይ 6 ወርሒ MRR ን ምቁራጽን' : '6-Month MRR & Churn Trends'}</span>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">New</span>
+          </button>
+
+          <button
+            onClick={() => setAnalyticsTab('churn_config')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer ${
+              analyticsTab === 'churn_config'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Bell className="w-4 h-4" />
+            <span>{language === 'ti' ? 'ምልክታ ምቁራጽ ቅጥዒ (Churn Alert)' : 'Churn Alert & Push Config'}</span>
+            {enableChurnAlert && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            )}
+          </button>
+        </div>
+
+        {/* Live Churn Gauge Status Pill */}
+        <div className="hidden lg:flex items-center space-x-3 px-3 py-1.5 rounded-xl bg-[#171226] border border-[#3E2E57] text-xs">
+          <div className="flex items-center space-x-1.5">
+            <span className="text-gray-400">Current Churn:</span>
+            <span className={`font-mono font-bold ${calculatedChurnRate > churnThreshold ? 'text-rose-400 animate-pulse' : 'text-emerald-400'}`}>
+              {calculatedChurnRate.toFixed(1)}%
+            </span>
+          </div>
+          <span className="text-gray-600">|</span>
+          <div className="flex items-center space-x-1.5">
+            <span className="text-gray-400">Push Alert Ceiling:</span>
+            <span className="font-mono font-bold text-amber-300">{churnThreshold.toFixed(1)}%</span>
+          </div>
+          <span className="text-gray-600">|</span>
+          <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            enableChurnAlert ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-gray-800 text-gray-400'
+          }`}>
+            {enableChurnAlert ? 'Push Active' : 'Push Muted'}
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -545,8 +725,275 @@ export const Analytics: React.FC<AnalyticsProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* DASHBOARD METRIC KPI SUMMARY ROW                                          */}
+      {/* VIEW 0: 30-DAY USER ACTIVITY & ENGAGEMENT DASHBOARD                       */}
       {/* ========================================================================= */}
+      {analyticsTab === 'activity_dashboard' && (
+        <UserActivityDashboard
+          user={user}
+          savedItems={savedItems}
+          onNavigateTab={onNavigateTab}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 1: 6-MONTH MRR & CHURN RECHARTS DASHBOARD                            */}
+      {/* ========================================================================= */}
+      {analyticsTab === 'mrr_churn' && (
+        <div className="space-y-6">
+          <AdminRevenueChurnChart user={user} />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 2: CHURN RATE PUSH NOTIFICATION CONFIGURATION CENTER                 */}
+      {/* ========================================================================= */}
+      {analyticsTab === 'churn_config' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Header Card */}
+          <div className="bg-gradient-to-r from-[#171128] via-[#100C1D] to-[#0A0713] border-2 border-amber-500/40 rounded-[28px] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
+                  <Bell className="w-4 h-4 text-amber-400" />
+                  <span>Automated Telemetry Sentinel</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-white font-cinzel">
+                  {language === 'ti' ? 'ናይ ምቁራጽ ደረት ምልክታ ምቁጻር' : 'Subscription Churn Alert & Push Dispatcher'}
+                </h2>
+                <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                  {language === 'ti'
+                    ? 'ናይ ዓማዊል ምቁራጽ ካብቲ ዝተወሰነ ደረት እንተበሊጹ፡ ስርዓት ብቀጥታ ናይ ፑሽ ምልክታ (Push Notification) ይልእኽ።'
+                    : 'Configure automated background monitoring to dispatch immediate push notifications via notificationService whenever subscriber churn surpasses your defined risk ceiling.'}
+                </p>
+              </div>
+
+              {/* Master Toggle */}
+              <div className="flex items-center space-x-4 bg-[#0E0A1A] border-2 border-amber-500/50 p-4 rounded-2xl shrink-0 shadow-lg">
+                <div className="text-right">
+                  <div className="text-xs font-bold text-white uppercase tracking-wider">
+                    {enableChurnAlert ? 'Push Alerts Active' : 'Alerts Disabled'}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {enableChurnAlert ? 'Listening on event bus' : 'Muted'}
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableChurnAlert}
+                    onChange={(e) => handleUpdateChurnToggle(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-14 h-7 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-amber-400 peer-checked:to-amber-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Config & Threshold Controls Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Threshold Slider Card */}
+            <div className="lg:col-span-2 bg-[#120D22] border border-[#3E2E5A] rounded-3xl p-6 space-y-6 shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#2C2042] pb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-400">
+                    <SlidersHorizontal className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {language === 'ti' ? 'ናይ ምቁራጽ ደረት ምምዳብ (%)' : 'Risk Ceiling Threshold Slider'}
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Specify the maximum acceptable monthly subscription churn rate before triggering alerts
+                    </p>
+                  </div>
+                </div>
+
+                <div className="px-4 py-2 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-200 font-mono font-black text-lg">
+                  {churnThreshold.toFixed(1)}%
+                </div>
+              </div>
+
+              {/* Slider Component */}
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between text-xs text-gray-400 font-mono">
+                  <span>Conservative (1.0%)</span>
+                  <span className="text-amber-300 font-bold">Standard (3.0%)</span>
+                  <span>High Risk (10.0%)</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="10.0"
+                  step="0.1"
+                  value={churnThreshold}
+                  onChange={(e) => handleUpdateChurnThreshold(parseFloat(e.target.value))}
+                  className="w-full h-3 bg-[#0A0713] rounded-lg appearance-none cursor-pointer accent-amber-400"
+                />
+              </div>
+
+              {/* Threshold Comparison Status */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+                calculatedChurnRate > churnThreshold
+                  ? 'bg-rose-950/30 border-rose-500 text-rose-200'
+                  : 'bg-emerald-950/30 border-emerald-500/50 text-emerald-200'
+              }`}>
+                <div className="flex items-center space-x-3">
+                  {calculatedChurnRate > churnThreshold ? (
+                    <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  )}
+                  <div>
+                    <div className="text-xs font-bold">
+                      {calculatedChurnRate > churnThreshold
+                        ? 'Threshold Breach Triggered!'
+                        : 'System Health Status: Safe & Within Limits'}
+                    </div>
+                    <div className="text-[11px] opacity-80">
+                      Current {timeRange} churn rate is <strong className="font-mono">{calculatedChurnRate.toFixed(1)}%</strong> vs threshold of <strong className="font-mono">{churnThreshold.toFixed(1)}%</strong>.
+                    </div>
+                  </div>
+                </div>
+
+                <span className={`px-3 py-1 rounded-full text-xs font-mono font-bold ${
+                  calculatedChurnRate > churnThreshold ? 'bg-rose-500 text-white' : 'bg-emerald-500/20 text-emerald-300'
+                }`}>
+                  {calculatedChurnRate > churnThreshold ? 'BREACH' : 'OPTIMAL'}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  onClick={handleTriggerTestPushAlert}
+                  className="px-5 py-3 rounded-2xl bg-[#221838] hover:bg-[#2F214E] border border-amber-500/40 text-amber-300 font-bold text-xs transition-all cursor-pointer flex items-center space-x-2 shadow-lg active:scale-95"
+                >
+                  <Volume2 className="w-4 h-4 text-amber-400" />
+                  <span>Test Push Alert (notificationService)</span>
+                </button>
+
+                <button
+                  onClick={() => handleSimulateBreach(4.5)}
+                  disabled={isSimulatingSpike}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-900 via-rose-800 to-rose-900 hover:brightness-110 text-white font-bold text-xs transition-all cursor-pointer flex items-center space-x-2 shadow-lg active:scale-95 disabled:opacity-50"
+                >
+                  <AlertTriangle className="w-4 h-4 text-rose-300" />
+                  <span>{isSimulatingSpike ? 'Simulating...' : 'Simulate 4.5% Churn Spike'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Notification Service Status Card */}
+            <div className="bg-[#120D22] border border-[#3E2E5A] rounded-3xl p-6 space-y-5 shadow-xl flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2 border-b border-[#2C2042] pb-3">
+                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-base font-bold text-white">Event Architecture</h3>
+                </div>
+
+                <div className="space-y-3 text-xs text-gray-300">
+                  <div className="p-3 rounded-xl bg-[#0A0713] border border-slate-800 space-y-1">
+                    <div className="font-bold text-amber-300 flex items-center justify-between">
+                      <span>Event Target:</span>
+                      <span className="font-mono text-[11px] text-gray-400">axumite:new_notification</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      Dispatched across the window event bus to wake PushNotificationToast and trigger audio chimes.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#0A0713] border border-slate-800 space-y-1">
+                    <div className="font-bold text-amber-300 flex items-center justify-between">
+                      <span>Category Payload:</span>
+                      <span className="font-mono text-[11px] text-gray-400">churn_alert</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      Includes lost MRR estimate, affected subscriber counts, and historical comparative delta.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#0A0713] border border-slate-800 space-y-1">
+                    <div className="font-bold text-amber-300 flex items-center justify-between">
+                      <span>Storage Persistence:</span>
+                      <span className="font-mono text-[11px] text-emerald-400">AppSystemConfig</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      Persisted safely to localStorage and synchronized with administrative governance policies.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setAnalyticsTab('mrr_churn')}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider hover:brightness-110 transition-all cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>View 6-Month MRR & Churn Charts</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 3: TELEMETRY & SYSTEM CAPABILITIES DASHBOARD                         */}
+      {/* ========================================================================= */}
+      {analyticsTab === 'telemetry' && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Quick Churn Alert Banner inside Telemetry */}
+          <div className="bg-gradient-to-r from-[#171026] via-[#120D1F] to-[#0A0714] border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-400 shrink-0">
+                <Bell className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white flex items-center space-x-2">
+                  <span>Subscription Churn Push Alert Monitor</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                    Ceiling: {churnThreshold.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5">
+                  Current rate is <strong className="text-emerald-400 font-mono">{calculatedChurnRate.toFixed(1)}%</strong>. Auto push alert is <strong className={enableChurnAlert ? 'text-amber-300' : 'text-gray-400'}>{enableChurnAlert ? 'Enabled' : 'Muted'}</strong>.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 shrink-0">
+              <button
+                onClick={() => setAnalyticsTab('activity_dashboard')}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs transition-all cursor-pointer flex items-center space-x-1.5 shadow-md"
+              >
+                <MessageSquareText className="w-3.5 h-3.5" />
+                <span>30-Day Activity</span>
+              </button>
+              <button
+                onClick={handleTriggerTestPushAlert}
+                className="px-3.5 py-2 rounded-xl bg-[#231A38] hover:bg-[#2F234C] border border-amber-500/30 text-amber-300 font-bold text-xs transition-all cursor-pointer flex items-center space-x-1.5"
+              >
+                <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Test Alert</span>
+              </button>
+              <button
+                onClick={() => setAnalyticsTab('churn_config')}
+                className="px-3.5 py-2 rounded-xl bg-[#1C142E] hover:bg-[#281D42] border border-[#483466] text-gray-300 font-bold text-xs transition-all cursor-pointer flex items-center space-x-1.5"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                <span>Config</span>
+              </button>
+            </div>
+          </div>
+
+      {/* DASHBOARD METRIC KPI SUMMARY ROW */}
       <div className="bg-gradient-to-r from-[#120E1C] via-[#1A1428] to-[#0D0A16] border border-[#8E6D28]/40 rounded-[28px] p-5 shadow-2xl">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           
@@ -885,8 +1332,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({
               <span className="font-mono font-extrabold text-emerald-400">99.2%</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-gray-400">Tigrinya Dialect Fidelity:</span>
-              <span className="font-bold text-amber-200">ti-ER (Eritrean)</span>
+              <span className="text-gray-400">Language Model Fidelity:</span>
+              <span className="font-bold text-amber-200">ትግርኛ (Tigrinya)</span>
             </div>
           </div>
 
@@ -900,6 +1347,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({
         </div>
 
       </div>
+        </div>
+      )}
 
     </div>
   );

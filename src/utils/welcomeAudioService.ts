@@ -114,35 +114,19 @@ export function playAxumiteChimeChord(): Promise<void> {
   });
 }
 
+export const DEFAULT_COMMUNITY_WELCOME_GREETING_TI = 'ከም ማሕበረሰብ ምስ ግዜ ንምስጓም፡ ዝተረቐቐ ቴክኖሎጂ ክህልወና ኣገዳሲ እዩ። ነዚ ተጀሚሩ ዘሎ ዕዮ ብዝበለጸ ንምቕጻልን ናብ ዝለዓለ ደረጃ ንምብጻሕን ሓገዝኩም የድልየና።';
+export const DEFAULT_COMMUNITY_WELCOME_GREETING_EN = 'As a community moving forward with time, having advanced technology is essential. To continue this initiated mission at its best and elevate it to the highest level, we need your support.';
+export const DEFAULT_COMMUNITY_WELCOME_GREETING_PHONETIC = 'Kem mahbereseb ms gzie nmswam: ztereqeqe technology khlwena agedasi eyu. Nezi tejimiru zelo eyo bzbeletse nmqtsaln nab zleale dereja nmbtsahn hagezkum yedlyena.';
+
 /**
  * Determine the customized Tigrinya welcome greeting text based on user identity
  */
 export function getWelcomeGreetingText(email?: string, name?: string): { textTi: string; textEn: string; phoneticTi: string } {
-  const normalizedEmail = (email || '').trim().toLowerCase();
-  const isSuperAdmin = normalizedEmail === 'beckylove2004@gmail.com';
-
-  if (isSuperAdmin) {
-    return {
-      textTi: 'እንቋዕ ናብ ኣክሱማይት AI ብደሓን መጻእኹም ልዑላዊት Superadmin Becky Love! ናይ ስራሕ ዓውድኹም ድሉው ኣሎ።',
-      textEn: 'Welcome to AXUMITE AI, Sovereign Superadmin Becky Love! Your root workspace is active.',
-      phoneticTi: 'Enkwae Nab Axumite AI Bdehan Mtsakum Lulawit Superadmin Becky Love! Nay Srah Awdekum Dluw Alo.',
-    };
-  }
-
-  const userName = name && name !== 'Guest User' && name !== 'ጋሻ (Guest User)' ? name : '';
-  const greetingTi = userName 
-    ? `እንቋዕ ናብ ኣክሱማይት AI ብደሓን መጻእኹም ${userName}! ናይ ትግርኛ ኣርቲፊሻል ኢንተለጀንስ ድሉው ኣሎ።`
-    : 'እንቋዕ ናብ ኣክሱማይት AI ብደሓን መጻእኹም! ናይ ትግርኛ ኣርቲፊሻል ኢንተለጀንስ ድሉው ኣሎ።';
-
-  const greetingEn = userName
-    ? `Welcome to AXUMITE AI, ${userName}! Your Tigrinya AI workspace is ready.`
-    : 'Welcome to AXUMITE AI! Your Tigrinya AI workspace is ready.';
-
-  const phoneticTi = userName
-    ? `Enkwae Nab Axumite AI Bdehan Mtsakum ${userName}! Nay Tigrinya AI Dluw Alo.`
-    : 'Enkwae Nab Axumite AI Bdehan Mtsakum! Nay Tigrinya Artificial Intelligence Dluw Alo.';
-
-  return { textTi: greetingTi, textEn: greetingEn, phoneticTi };
+  return {
+    textTi: DEFAULT_COMMUNITY_WELCOME_GREETING_TI,
+    textEn: DEFAULT_COMMUNITY_WELCOME_GREETING_EN,
+    phoneticTi: DEFAULT_COMMUNITY_WELCOME_GREETING_PHONETIC,
+  };
 }
 
 // Active audio references

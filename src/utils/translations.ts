@@ -1,4 +1,4 @@
-export type Language = 'ti' | 'en' | 'de';
+export type Language = 'ti' | 'ti_tg' | 'en' | 'de';
 
 export interface TranslationDictionary {
   // Tabs & Navigation
@@ -87,6 +87,7 @@ export interface TranslationDictionary {
 
   // Language Switcher
   langTigrinya: string;
+  langTigrayTigrinya: string;
   langEnglish: string;
   langGerman: string;
   selectLanguage: string;
@@ -229,6 +230,7 @@ export const translations: Record<Language, TranslationDictionary> = {
 
     // Language Switcher
     langTigrinya: 'ትግርኛ (Tigrinya)',
+    langTigrayTigrinya: 'ትግርኛ (Tigrinya)',
     langEnglish: 'English',
     langGerman: 'Deutsch (German)',
     selectLanguage: 'ቋንቋ ምረጹ',
@@ -259,6 +261,147 @@ export const translations: Record<Language, TranslationDictionary> = {
     telebirr: 'ናቕፋ ዲጂታል ክፍሊት',
     cbeBirr: 'ናይ ኤርትራ ንግዲ ባንክ',
     commercialBank: 'ናይ ኤርትራ ንግዲ ባንክ',
+    amount: 'መጠን ገንዘብ',
+    sendMoney: 'ክፍሊት ፈጽም',
+
+    // Vision
+    uploadImage: 'ምስሊ ኣእትዉ',
+    analyzeImage: 'ምስሊ መርምር',
+    ocrExtractedText: 'ዝተነበበ ጽሑፍ',
+
+    // Saved Vault
+    savedInsightsTitle: 'ዝተዓቀቡ ትንታነታትን ታሪኽን',
+    noSavedItems: 'ዝተዓቀበ ነገር የለን',
+    deleteItem: 'ደምስስ',
+
+    // Modals
+    close: 'ዕጾ',
+    save: 'ዓቅብ',
+    cancel: 'ሰርዝ',
+    login: 'እቶ',
+    signup: 'ተመዝገብ',
+    logout: 'ውጻእ',
+    verified: 'ዝተረጋገጸ',
+    notVerified: 'ዘይተረጋገጸ',
+  },
+  ti_tg: {
+    // Tabs & Navigation - Tigrinya
+    tabPremiere: 'ቀንዲ መእተዊ ገጽ',
+    tabChat: 'ምስ AI ምዕላል',
+    tabAssistance: 'AI ረዳኢ / ሓጋዚ',
+    tabPayment: 'ክፍሊትን ኣባልነትን',
+    tabVision: 'ምስሊ መርማሪ ስቱድዮ',
+    tabPromptForge: 'AI ፕሮምፕት ፎርጅ',
+    tabTranslator: 'ተርጓሚ ቋንቋታት',
+    tabCalligraphy: 'ግእዝ ካሊግራፊ',
+    tabEducation: 'ናይ ትምህርቲ ማእከል (ኣካዳሚ)',
+    tabBusinessHub: 'ናይ ንግዲ ማእከል (Business Hub)',
+    tabCulturalExplorer: 'ባህላዊ መርማሪ (ትግራይን ኤርትራን)',
+    tabMediaArchive: 'ዲጂታል ታሪኽን ውርሻን መዝገብ',
+    tabAnalytics: 'ስታቲስቲክስን ጸብጻብን',
+    tabSaved: 'ዝተዓቀቡ ትንታነታት',
+    tabManagement: 'ስርዓተ-ምሕደራ',
+    tabHome: 'ቀንዲ ገጽ',
+    tabChats: 'ዕላላት',
+    tabHistory: 'ታሪኽ',
+    tabProfile: 'ፕሮፋይል',
+
+    // Premiere View Main Titles & Prompts
+    premiereGreetingLine1: 'እንቋዕ ብደሓን መጻእኹም ናብ',
+    premiereGreetingLine2: 'ኣክሱማይት AI (AXUMITE AI)',
+    yourNameLabel: 'ስምኩም',
+    userTypeLabel: 'ደረጃ ተጠቃሚ',
+    standardUser: 'ተጠቃሚ',
+    premiumUser: 'ልዑላዊ ኣባል (Pro)',
+    welcomeBack: 'እንቋዕ ብደሓን መጻእኹም',
+    hello: 'ሰላም ከመይ ኣለኹም',
+    aiAssistantCardTitle: 'AI ረዳኢ / ሓጋዚ',
+    chatWithAi: 'ምስ AI ምዕላል',
+
+    // Voice Hero Card
+    voiceHeroTitle: 'ብድምጺ ምዝርራብ',
+    voiceHeroSubtitle: 'ብትግርኛ፡ እንግሊዝኛ ወይ ጀርመን ብድምጺ ተዛረቡ',
+    startVoiceBtn: 'ብድምጺ ጀምር',
+
+    // 10 AI Tools Matrix
+    toolAiChatTitle: 'ምስ AI ምዕላል',
+    toolAiChatDesc: 'ብትግርኛ፡ እንግሊዝኛን ጀርመንን ምስ AI ብድምጽን ጽሑፍን ተዛረቡ።',
+    toolSmartAssistantTitle: 'ብልሒ ዘለዎ AI ረዳኢ',
+    toolSmartAssistantDesc: 'ዝኾነ ሕቶ ሕተቱ፡ ንዕለታዊ ስራሕኩምን ምርምርኩምን ሓገዝ ርከቡ።',
+    toolDocumentAiTitle: 'ሰነድ መርማሪ (Doc AI)',
+    toolDocumentAiDesc: 'PDF፡ Word፡ ሰነዳት ብምስዳድ ጽሟቕን ትንታነን ርከቡ።',
+    toolAiWriterTitle: 'AI ጸሓፊ',
+    toolAiWriterDesc: 'ደብዳበታት፡ ጽሑፋት፡ ጸብጻባት ብAI ብቅልጡፍ ኣዳልዉ።',
+    toolSpeechToTextTitle: 'ድምጺ ናብ ጽሑፍ',
+    toolSpeechToTextDesc: 'ዝተዛረብኩምዎ ድምጺ ብልክዕ ናብ ጽሑፍ ይቕየር።',
+    toolTextToSpeechTitle: 'ጽሑፍ ናብ ድምጺ',
+    toolTextToSpeechDesc: 'መልስታት AI ብጥዑም ተፈጥሮኣዊ ድምጺ ስምዑ።',
+    toolImageGenTitle: 'ምስሊ ፈጣሪ',
+    toolImageGenDesc: 'ብጽሑፍ ዝገለጽኩምዎ ሓሳብ ናብ ብሉጽ ስእሊ ይቕየር።',
+    toolImageAnalyzerTitle: 'ምስሊ መርማሪ',
+    toolImageAnalyzerDesc: 'ስእሊ ብምስዳድ ትሕዝቶኡን ዝርዝሩን ብAI ተረዱ።',
+    toolTranslatorTitle: 'ተርጓሚ ቋንቋታት',
+    toolTranslatorDesc: 'ትግርኛ፡ ግእዝ፡ እንግሊዝኛ፡ ጀርመንን ካልኦትን ብልክዕ ተርጒሙ።',
+    toolAiLearningTitle: 'ትምህርትን ኣካዳምን',
+    toolAiLearningDesc: 'STEM፡ ቋንቋታት፡ ናይ ገዛ ዕዮ ፍታሕን ምስክር ወረቐትን ብAI ተማሃሩ።',
+
+    // Business & Cultural Features
+    businessCopilotTitle: 'AI ናይ ንግዲ መሻርኽቲ',
+    businessCopilotDesc: 'ናይ ንግዲ መደብ፡ ዕዳጋ ትንታነ፡ ፋይናንስ፡ ሰነዳትን ዓማዊል ምሕደራን።',
+    culturalExplorerTitle: 'ባህላዊ መዝገብ ትግራይን ኤርትራን',
+    culturalExplorerDesc: 'ታሪኽ ኣክሱም፡ ጥንታዊ ውርሻታት፡ ምስላታት፡ ሙዚቃ፡ ባህላዊ ክዳውንትን ዛንታታትን።',
+    mediaArchiveTitle: 'ዲጂታል ታሪኽን ውርሻን መዝገብ',
+    mediaArchiveDesc: 'ስእልታት፡ ናይ ኣበው ቃል-ታሪኽን ጥንታዊ ሰነዳትን ምዕቃብ።',
+
+    // Upgrade Banner
+    upgradePremiumTitle: 'ናብ ፕሪምየም ክብ ኣብሉ',
+    upgradePremiumDesc: 'ንኹሉ ፍሉይ ናይ AI ኣገልግሎታት ብዘይ ገደብ ተጠቐሙ።',
+    goPremiumBtn: 'ፕሪምየም ውሰዱ',
+
+    // Navbar
+    navStartScreen: '▶ መእተዊ ገጽ',
+    navSettings: 'ቅጥዕታት',
+    navDeveloper: 'ደቨሎፐር',
+    navSecurity: 'ውሕስነት',
+    navAuth: 'ምእታው / ምምዝጋብ',
+    navWelcome: 'መቐበሊ',
+    navGuide: 'መርሒ',
+    navOffline: 'ኦፍላይን',
+    navOnline: 'ኦንላይን',
+
+    // Language Switcher
+    langTigrinya: 'ትግርኛ (Tigrinya)',
+    langTigrayTigrinya: 'ትግርኛ (Tigrinya)',
+    langEnglish: 'English',
+    langGerman: 'Deutsch (German)',
+    selectLanguage: 'ቋንቋ ምረጹ',
+    switchLangShort: 'ትግርኛ',
+
+    // Chat
+    chatPlaceholder: 'ሕቶኹም ብትግርኛ፡ እንግሊዝኛ ወይ ጀርመን ጽሓፉ ወይ ብድምጺ ተዛረቡ...',
+    send: 'ስደድ',
+    clearChat: 'ኣጽሪ',
+    copyText: 'ቅዳሕ',
+    copied: 'ተቐዲሑ!',
+    saveInsight: 'ዓቅብ',
+    savedSuccess: 'ብዓወት ተዓቒቡ!',
+    speakText: 'ስማዕ',
+    stopVoice: 'ኣቋርጽ',
+    deepReasoning: 'ዕሙቕ ትንታነ',
+    ancientScript: 'ግእዝ ፊደላት',
+    creativeMode: 'ፈጠራዊ',
+    generalMode: 'ሓፈሻዊ',
+
+    // Voice Assistant
+    voiceListening: 'ድምጽኹም ይስማዕ ኣሎ...',
+    voiceTapToSpeak: 'ንምዝራብ ጠውቑ',
+    voiceProcessing: 'ድምጺ ይምርመር ኣሎ...',
+
+    // Payments
+    paymentHeader: 'ናይ ክፍሊት ስርዓት (Telebirr, CBE, ዓለምለኸ)',
+    telebirr: 'ቴሌብር (Telebirr)',
+    cbeBirr: 'ኢትዮጵያ ንግዲ ባንክ (CBE Birr)',
+    commercialBank: 'ናይ ንግዲ ባንክ',
     amount: 'መጠን ገንዘብ',
     sendMoney: 'ክፍሊት ፈጽም',
 
@@ -369,6 +512,7 @@ export const translations: Record<Language, TranslationDictionary> = {
 
     // Language Switcher
     langTigrinya: 'ትግርኛ (Tigrinya)',
+    langTigrayTigrinya: 'ትግርኛ (Tigrinya)',
     langEnglish: 'English (US/UK)',
     langGerman: 'Deutsch (German)',
     selectLanguage: 'Select Language',
@@ -509,6 +653,7 @@ export const translations: Record<Language, TranslationDictionary> = {
 
     // Language Switcher
     langTigrinya: 'ትግርኛ (Tigrinya)',
+    langTigrayTigrinya: 'ትግርኛ (Tigrinya)',
     langEnglish: 'English (Englisch)',
     langGerman: 'Deutsch (German)',
     selectLanguage: 'Sprache wählen',

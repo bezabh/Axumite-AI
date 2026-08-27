@@ -1,6 +1,7 @@
 import React from 'react';
-import { ShieldAlert, Clock, RefreshCw, LogOut, Lock } from 'lucide-react';
+import { ShieldAlert, Clock, RefreshCw, LogOut, Lock, Moon } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import axumiteEmblem from '../assets/axumite_gold_icon.jpg';
 
 interface IdleWarningModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface IdleWarningModalProps {
   formattedRemaining: string;
   onStayLoggedIn: () => void;
   onLogoutNow: () => void;
+  onEnterHibernation?: () => void;
 }
 
 export const IdleWarningModal: React.FC<IdleWarningModalProps> = ({
@@ -16,6 +18,7 @@ export const IdleWarningModal: React.FC<IdleWarningModalProps> = ({
   formattedRemaining,
   onStayLoggedIn,
   onLogoutNow,
+  onEnterHibernation,
 }) => {
   const { language } = useLanguage();
 
@@ -31,8 +34,8 @@ export const IdleWarningModal: React.FC<IdleWarningModalProps> = ({
         <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="flex items-center space-x-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/60 flex items-center justify-center text-amber-400 shrink-0 animate-bounce">
-            <Clock className="w-6 h-6" />
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-amber-500/60 shadow-lg shadow-amber-500/30 p-0.5 shrink-0 bg-gradient-to-b from-[#8E6D28] to-[#0A0805]">
+            <img src={axumiteEmblem} alt="Axumite AI" className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
@@ -65,11 +68,11 @@ export const IdleWarningModal: React.FC<IdleWarningModalProps> = ({
 
         <p className="text-[11px] text-slate-400 text-center">
           {language === 'ti'
-            ? 'ኣብ ኣክሱማይት AI ንጥፈታትኩም ንምቕጻል ነዚ ዝስዕብ መልጎም ጠውቑ።'
-            : 'Click below or interact with the screen to keep your active session.'}
+            ? 'ኣብ ኣክሱማይት AI ንጥፈታትኩም ንምቕጻል ወይ ናብ ዕረፍቲ/ድቃስ ንምእታው ዝስዕቡ መልጎማት ጠውቑ።'
+            : 'Click below to keep your active session or switch into sovereign hibernation mode.'}
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <div className="flex flex-col gap-2 pt-1">
           <button
             type="button"
             onClick={onStayLoggedIn}
@@ -79,14 +82,27 @@ export const IdleWarningModal: React.FC<IdleWarningModalProps> = ({
             <span>{language === 'ti' ? 'ንጥፈት ኣረጋግጽ (Stay In)' : 'Stay Logged In'}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onLogoutNow}
-            className="w-full py-3 px-4 bg-[#1F1B2A] hover:bg-[#2A2538] border border-slate-700 text-slate-300 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition-all cursor-pointer"
-          >
-            <LogOut className="w-4 h-4 text-rose-400" />
-            <span>{language === 'ti' ? 'ሕጂ ውጻእ (Log Out)' : 'Log Out Now'}</span>
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {onEnterHibernation && (
+              <button
+                type="button"
+                onClick={onEnterHibernation}
+                className="w-full py-2.5 px-3 bg-[#1B152B] hover:bg-[#281F40] border border-amber-500/40 hover:border-amber-400 text-amber-300 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+              >
+                <Moon className="w-3.5 h-3.5 text-amber-400" />
+                <span>{language === 'ti' ? 'ዕረፍቲ/ድቃስ (Hibernate)' : 'Enter Hibernation'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onLogoutNow}
+              className="w-full py-2.5 px-3 bg-[#1F1B2A] hover:bg-[#2A2538] border border-slate-700 text-slate-300 hover:text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>{language === 'ti' ? 'ሕጂ ውጻእ (Log Out)' : 'Log Out Now'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

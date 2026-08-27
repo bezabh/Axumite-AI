@@ -1,11 +1,20 @@
 import React from 'react';
 import { ShieldCheck, Sparkles, Globe, Mail, Phone, MapPin, User } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface FooterProps {
   logoSrc?: string;
 }
 
 export const Footer: React.FC<FooterProps> = ({ logoSrc }) => {
+  let isTigrinya = true;
+  try {
+    const { language } = useLanguage();
+    isTigrinya = language === 'ti' || language === 'ti_tg';
+  } catch {
+    isTigrinya = true;
+  }
+
   return (
     <footer className="w-full bg-[#08070B] border-t border-[#8E6D28]/30 py-8 px-4 sm:px-6 lg:px-8 mt-12 text-slate-300 font-sans">
       <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -27,7 +36,11 @@ export const Footer: React.FC<FooterProps> = ({ logoSrc }) => {
             
             <div className="text-xs text-gray-400 mt-1 flex items-center justify-center sm:justify-start space-x-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Next-Generation Multimodal AI & Sovereign Heritage Intelligence</span>
+              <span>
+                {isTigrinya 
+                  ? 'ዝቕጽል ወለዶ ብዙሕ-ዓይነታዊ AI & ልዑላዊ ናይ ቅርሲ ብልሒ' 
+                  : 'Next-Generation Multimodal AI & Sovereign Heritage Intelligence'}
+              </span>
             </div>
           </div>
         </div>

@@ -40,20 +40,20 @@ export const ObeliskChat: React.FC<ObeliskChatProps> = ({
       id: 'welcome-1',
       role: 'model',
       content: language === 'ti' 
-        ? `ሰላም! ኣነ **ኣክሱማዊ AI (AXUMITE AI)** እየ። ብታሪካዊ ግርማ ኣክሱምን ዘመናዊ ናይ AI ቴክኖሎጂን ዝተሃነጸ ናይ ሓበሬታ፣ ሓገዝን ምኽርን ስርዓት።
+        ? `ሰላም! ኣነ **ኣክሱማዊ AI (AXUMITE AI)** እየ። ብባህላዊ ውርሻን ዘመናዊ ናይ ኣርቲፊሻል ኢንተለጀንስ ቴክኖሎጂን ዝተሃነጸ ናይ ሓበሬታን ሓገዝን ስርዓት።
 
-ከመይ ገይረ ክሕግዘኩም ይኽእል?
-- **ትግርኛን ግዕዝን (Tigrinya & Ge'ez Intelligence)**: ብትግርኛ ምዝራብ፣ ትርጉም፣ ጽሑፍ ምውጽእ፣ ባህላዊን ታሪካዊን ሕቶታት ምምላስ።
-- **ምኽርን ሓገዝን (Assistance & Guidelines)**: ንኹሉ ሓበሬታ፣ ሓገዝን ሪፖርትን ብትግርኛ ብሉጽ ግልጋሎት ምሃብ።
-- **ዓለምለኻዊ ቴክኖሎጂን ኮዲንግን**: ናይ ፕሮግራሚንግ፣ ሶፍትዌር፣ ሳይንስን ምህንድስናን ሕቶታት ብትግርኛ ምብራህ።
-- **ምስልን ፕሮምፕትን (Vision & Prompt Forge)**: 8K ፎቶኦግራፊክ ፕሮምፕት ምፍጣርን ስእልታት ብትግርኛ ምሕታትን።`
+ብትግርኛ ወይ ብእንግሊዝኛ ዝኾነ ሕቶ ክትሓቱ ትኽእሉ ኢኹም፦
+• **ቋንቋን ትርጉምን**: ትግርኛ፣ ግዕዝን ዓለምለኻዊ ቋንቋታትን
+• **ቴክኖሎጂን ሳይንስን**: ኮዲንግ፣ ሶፍትዌርን ኢንጂነሪንግን
+• **ስራሕን ንግድን**: ናይ ስራሕ ዕድላት፣ ጽሑፋትን ፕላንን
+• **ስእልን ፈጠራን**: 8K ፕሮምፕት ምፍጣርን ምርመራን`
         : `Greetings! I am **AXUMITE AI**, powered by Axumite Heritage & Advanced Multilingual Intelligence.
 
-How can I assist you today?
-- **Tigrinya & Ge'ez Intelligence**: Speech, translation, cultural queries, and historical analysis.
-- **Assistance & Guidance**: Complete AI assistant support in English, Tigrinya, and Ge'ez.
-- **Global Technology & Coding**: Programming, software engineering, science, and math.
-- **Vision & Creative Studio**: 8K photographic prompts, image analysis, and creative synthesis.`,
+Ask any question in Tigrinya or English:
+• **Languages & Translation**: Tigrinya, Ge'ez, and multilingual translation
+• **Technology & Engineering**: Coding, modern software, and sciences
+• **Business & Career**: Professional advice, documents, and CV assistance
+• **Creative & Vision**: 8K photographic prompts and visual analysis`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -161,8 +161,11 @@ How can I assist you today?
         };
 
         recognition.onerror = (err: any) => {
-          console.log('Speech recognition error:', err);
           setIsListening(false);
+          if (err?.error === 'not-allowed' || err?.error === 'service-not-allowed') {
+            // Provide a graceful fallback prompt in input
+            setInput((prev) => prev || 'ሰላም፡ ብዛዕባ ታሪኽ ኣክሱም ንገረኒ።');
+          }
         };
 
         recognition.onend = () => {
@@ -175,9 +178,9 @@ How can I assist you today?
         recognitionRef.current = recognition;
         recognition.start();
         setIsListening(true);
-      } catch (err) {
-        console.error('Mic start error:', err);
+      } catch {
         setIsListening(false);
+        setInput((prev) => prev || 'ሰላም፡ ብዛዕባ ታሪኽ ኣክሱም ንገረኒ።');
       }
     }
   };
@@ -407,11 +410,11 @@ How can I assist you today?
   };
 
   const quickStarters = [
-    { label: '✨ ብትግርኛ ተዛረበኒ', prompt: 'ብትግርኛ ቋንቋ ብዛዕባ ታሪክ ኣክሱም፡ ንጉስ እዛና፡ ወታደራዊን ንግዳውን ስልጣነን ተንቲንካ ግለጸለይ።' },
-    { label: '🏛️ ታሪካዊ ሓወልቲ ኣክሱም', prompt: 'ብትግርኛ ብዛዕባ ኣሰራርሓ፡ ቅርጽን ክብደትን ዓበይቲ ሓወልትታት ኣክሱም ብዝርዝር ሓብረኒ።' },
-    { label: '⚡ ኮዲንግን ቴክኖሎጂን', prompt: 'ብትግርኛ ቋንቋ፡ ብዛዕባ Web Development, Full-stack TypeScript architecture, ን API integration ን ብግልጺ ኣብራህ።' },
-    { label: '📜 ግዕዝን ትግርኛን', prompt: 'ብትግርኛ ብዛዕባ ታሪካዊ ምዕባለ ፊደል ግዕዝን ትግርኛን፡ ኣብ ጥንታዊ ታሪክ ቀይሕ ባሕሪ ዘለዎ ቦታን ሓብረኒ።' },
-    { label: '🎨 8K ፕሮምፕት ምፍጣር', prompt: 'ብትግርኛ ቋንቋ ሓደ ብሉጽ 8K Midjourney Image Prompt ብዛዕባ ወርቃዊ ዝፋን ኣክሱም ኣዳሉወለይ።' },
+    { label: '🏛️ ታሪክን ቅርስን', prompt: 'ብትግርኛ ቋንቋ ብዛዕባ ታሪክ ስልጣነ ኣክሱም፡ ስነ-ህንጻ ሓወልትታትን ንጉስ እዛናን ተንቲንካ ግለጸለይ።' },
+    { label: '⚡ ቴክኖሎጂን ኮዲንግን', prompt: 'ብትግርኛ ቋንቋ፡ ብዛዕባ Web Development, Full-stack TypeScript architecture, ን API integration ን ብግልጺ ኣብራህ።' },
+    { label: '🌐 ትርጉምን ቋንቋን', prompt: 'ብትግርኛ ቋንቋ ብዛዕባ ታሪካዊ ምዕባለ ፊደል ግዕዝን ትግርኛን፡ ኣብ ዞባና ዘለዎ ስነ-ጽሑፋዊ ውርሻን ሓብረኒ።' },
+    { label: '🎨 8K ስእላዊ ፈጠራ', prompt: 'ብትግርኛ ቋንቋ ሓደ ብሉጽ 8K Photographic Prompt ብዛዕባ ወርቃዊ ዝፋን ኣክሱምን ጥንታዊ ቤተ-መንግስትን ኣዳሉወለይ።' },
+    { label: '💼 ንግድን ስራሕን', prompt: 'ብትግርኛ ቋንቋ፡ ንናይ ንግዲ ትልሚ (Business Plan) ወይ ናይ ስራሕ ቃለ-መሕትት ምድላው ዝኸውን ሓገዝን መምርሕን ሃበኒ።' },
   ];
 
   return (
@@ -679,8 +682,7 @@ How can I assist you today?
                 onChange={(e: any) => setSpeechLang(e.target.value)}
                 className="bg-transparent text-[11px] text-gray-300 focus:outline-none cursor-pointer font-sans"
               >
-                <option value="ti-ET" className="bg-[#080808] text-gray-200">Tigrinya (ti-ET)</option>
-                <option value="ti-ER" className="bg-[#080808] text-gray-200">Tigrinya (ti-ER)</option>
+                <option value="ti-ER" className="bg-[#080808] text-gray-200">ትግርኛ (Tigrinya)</option>
                 <option value="en-US" className="bg-[#080808] text-gray-200">English (en-US)</option>
               </select>
             </div>

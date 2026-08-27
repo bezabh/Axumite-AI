@@ -38,18 +38,18 @@ export const OFFLINE_DICTIONARY: DictionaryEntry[] = [
     phonetic: 'Hade id ayneqen',
     english: 'One hand cannot clap / Unity creates strength',
     category: 'proverb',
-    explanation: 'Foundational Eritrean social principle highlighting community cooperation and solidarity (ሕብረት).',
+    explanation: 'Foundational Tigray social principle highlighting community cooperation and solidarity (ሕብረት).',
     exampleSentence: 'ብሓደ ኮይና ንዕየ፤ ሓደ ኢድ ኣይነቅዕን እዩ።'
   },
   {
     id: 'd5',
-    tigrinya: 'ኣስመራ',
-    geezScript: 'ኣስመራ',
-    phonetic: 'Asmara',
-    english: 'Asmara (Capital city of Eritrea)',
+    tigrinya: 'መቐለ',
+    geezScript: 'መቐለ',
+    phonetic: 'Mekelle',
+    english: 'Mekelle (Capital city of Tigray)',
     category: 'geography',
-    explanation: 'The UNESCO World Heritage capital of Eritrea, renowned for its modernist Italianate architecture, wide palm-lined avenues, and cafe culture.',
-    exampleSentence: 'ኣስመራ ናይ ኤርትራ ርእሰ ከተማ እያ።'
+    explanation: 'The historic capital of Tigray, renowned for Yohannes IV Palace, cultural institutions, and vibrant traditions.',
+    exampleSentence: 'መቐለ ናይ ትግራይ ርእሰ ከተማ እያ።'
   },
   {
     id: 'd6',

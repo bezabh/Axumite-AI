@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   onAuthStateChanged,
+  getRedirectResult,
   User as FirebaseUser
 } from 'firebase/auth';
 import { 
@@ -16,6 +17,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
+  getDocFromServer,
   deleteDoc,
   collection, 
   getDocs, 
@@ -44,6 +46,64 @@ export const storage = getStorage(app, firebaseConfig.storageBucket ? `gs://${fi
 export const googleProvider = new GoogleAuthProvider();
 
 export const SUPERADMIN_EMAIL = 'beckylove2004@gmail.com';
+
+// Test connection to Firestore on initialization
+async function testFirestoreConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Please check your Firebase configuration / internet connectivity.");
+    }
+  }
+}
+testFirestoreConnection();
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.warn('Firestore Error Context: ', JSON.stringify(errInfo));
+}
 
 /**
  * Helper to translate Firebase Auth error codes to user-friendly messages in Tigrinya and English
@@ -250,6 +310,53 @@ export function onFirebaseAuthStateChanged(callback: (user: FirebaseUser | null)
   return onAuthStateChanged(auth, callback);
 }
 
+/**
+ * Handle and resolve Firebase Auth redirect results to prevent session errors during initial login sequence
+ */
+export async function handleFirebaseRedirectResult(): Promise<UserProfile | null> {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result && result.user) {
+      const fbUser = result.user;
+      const email = fbUser.email || '';
+      if (!email) return null;
+
+      const isSuperadmin = email.trim().toLowerCase() === SUPERADMIN_EMAIL;
+      let profile = await fetchUserProfileFromFirestore(email);
+
+      if (!profile) {
+        profile = {
+          id: fbUser.uid || getCleanUserId(email),
+          name: fbUser.displayName || (isSuperadmin ? 'Becky Love (Superadmin)' : 'Axumite Member'),
+          email: email.trim().toLowerCase(),
+          phoneNumber: fbUser.phoneNumber || '+291 7 000000',
+          isPhoneVerified: !!fbUser.phoneNumber || isSuperadmin,
+          isEmailVerified: fbUser.emailVerified || isSuperadmin,
+          avatar: fbUser.photoURL || (isSuperadmin ? '👑' : '🦁'),
+          role: isSuperadmin ? 'Creator' : 'Free Member',
+          preferredLanguage: 'ti-ER',
+          isLoggedIn: true,
+          joinedDate: new Date().toISOString(),
+          offlineAccessEnabled: true,
+          savedInsightsCount: 0,
+        };
+        await syncUserProfileToFirestore(profile);
+      } else {
+        profile.isLoggedIn = true;
+        if (isSuperadmin) profile.role = 'Creator';
+        if (fbUser.displayName && !profile.name) profile.name = fbUser.displayName;
+        await syncUserProfileToFirestore(profile);
+      }
+
+      return profile;
+    }
+  } catch (error: any) {
+    // Gracefully handle redirect errors (such as user-cancelled, network timeout, or iframe restrictions)
+    console.warn('Firebase Redirect Result handler note (handled gracefully):', error);
+  }
+  return null;
+}
+
 /* =========================================================================
    2. USER-SPECIFIC DATABASE & PROFILE MANAGEMENT
    ========================================================================= */
@@ -290,6 +397,93 @@ export async function fetchUserProfileFromFirestore(email: string): Promise<User
     console.warn('Firestore fetch profile notice:', error);
   }
   return null;
+}
+
+/**
+ * Upload a user avatar image to Firebase Storage and update the user profile in Firestore
+ */
+export async function uploadAvatarToFirebaseStorage(
+  fileOrBlob: File | Blob | string,
+  userEmail: string,
+  userId?: string
+): Promise<{ success: boolean; downloadUrl: string; error?: string }> {
+  const cleanId = getCleanUserId(userEmail || userId || 'guest');
+  const timestamp = Date.now();
+  let downloadUrl = '';
+
+  try {
+    if (typeof fileOrBlob === 'string') {
+      if (fileOrBlob.startsWith('data:')) {
+        const storagePath = `avatars/${cleanId}_${timestamp}`;
+        const fileRef = storageRef(storage, storagePath);
+        await uploadString(fileRef, fileOrBlob, 'data_url');
+        downloadUrl = await getDownloadURL(fileRef);
+      } else {
+        downloadUrl = fileOrBlob;
+      }
+    } else {
+      const ext = (fileOrBlob instanceof File && fileOrBlob.name.includes('.')) 
+        ? fileOrBlob.name.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg'
+        : 'jpg';
+      const storagePath = `avatars/${cleanId}_${timestamp}.${ext}`;
+      const fileRef = storageRef(storage, storagePath);
+      const contentType = fileOrBlob.type || 'image/jpeg';
+      
+      const uploadResult = await uploadBytes(fileRef, fileOrBlob, {
+        contentType,
+        customMetadata: {
+          uploadedBy: userEmail || cleanId,
+          type: 'user_avatar',
+          updatedAt: new Date().toISOString()
+        }
+      });
+      downloadUrl = await getDownloadURL(uploadResult.ref);
+    }
+  } catch (storageErr) {
+    console.warn('Firebase Storage avatar upload note (applying robust fallback):', storageErr);
+  }
+
+  // If Firebase Storage did not return a URL (e.g. offline/storage config), generate safe dataUrl fallback
+  if (!downloadUrl && typeof fileOrBlob !== 'string') {
+    try {
+      downloadUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(fileOrBlob as Blob);
+      });
+    } catch (readErr) {
+      console.warn('Fallback data URL generation error:', readErr);
+    }
+  } else if (!downloadUrl && typeof fileOrBlob === 'string') {
+    downloadUrl = fileOrBlob;
+  }
+
+  if (!downloadUrl) {
+    return { success: false, downloadUrl: '', error: 'Failed to process image' };
+  }
+
+  // 1. Update Firestore user document
+  try {
+    const userDocRef = doc(db, 'users', cleanId);
+    await setDoc(userDocRef, {
+      avatar: downloadUrl,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+  } catch (firestoreErr) {
+    handleFirestoreError(firestoreErr, OperationType.UPDATE, `users/${cleanId}`);
+  }
+
+  // 2. Also update Firebase Auth profile photoURL if user is signed in
+  try {
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+      await updateProfile(auth.currentUser, { photoURL: downloadUrl });
+    }
+  } catch (authErr) {
+    console.warn('Could not update Firebase Auth photoURL:', authErr);
+  }
+
+  return { success: true, downloadUrl };
 }
 
 /* =========================================================================
@@ -563,7 +757,7 @@ export async function getUserStorageStats(userEmail: string, role?: string): Pro
     quotaBytes = 5 * 1024 * 1024 * 1024; // 5GB for Superadmin Creator
   } else if (role === 'Axumite Sovereign Scholar' || role === 'Admin') {
     quotaBytes = 2 * 1024 * 1024 * 1024; // 2GB for Scholar / Admin
-  } else if (role === 'ኤርትራዊ AI Pro') {
+  } else if (role === 'ኣክሱማይት AI Pro') {
     quotaBytes = 500 * 1024 * 1024; // 500MB for AI Pro
   }
 

@@ -49,7 +49,7 @@ export const ROLE_RATE_LIMIT_TIERS: Record<string, RateLimitTierConfig> = {
     maxAiRequests: 20,
     maxPaymentRequests: 15,
   },
-  'ኤርትራዊ AI Pro': {
+  'ኣክሱማይት AI Pro': {
     name: 'AI Pro Member',
     windowMs: 60 * 1000,
     maxRequests: 60,

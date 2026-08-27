@@ -125,8 +125,10 @@ export const AudioTranslationModal: React.FC<AudioTranslationModalProps> = ({
       };
 
       recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
         setIsRecording(false);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
+          fallbackSimulatedVoiceInput(activeSpeaker);
+        }
       };
 
       recognition.onend = () => {
@@ -169,7 +171,7 @@ export const AudioTranslationModal: React.FC<AudioTranslationModalProps> = ({
     setIsRecording(true);
     const sampleTigrinyaPhrases = [
       'ከመይ ኣለኻ፧ ከመይ ቀኒኻ፧',
-      'ሰላም፡ ናብ ኤርትራ እንቋዕ ብደሓን መጻእኩም።',
+      'ሰላም፡ ናብ ትግራይ እንቋዕ ብደሓን መጻእኩም።',
       'ኣብዚ ከባቢ ጽቡቕ ናይ መግቢ ቤት ኣበይ ኣሎ፧',
       'ናይ ሎሚ መዓልቲ ጸብጻብ ክትነግረኒ ትኽእልዶ፧',
       'ናብ ኣስመራ ንምኻድ ዝሓሸ መንገዲ ኣየናይ እዩ፧',
@@ -600,7 +602,7 @@ export const AudioTranslationModal: React.FC<AudioTranslationModalProps> = ({
                       {isRecording && activeSpeaker === 'tigrinya' ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                     </div>
                     <span>
-                      {isRecording && activeSpeaker === 'tigrinya' ? 'ደው ኣብል (Stop)' : '🇪🇷 ብትግርኛ ተዛረቡ'}
+                      {isRecording && activeSpeaker === 'tigrinya' ? 'ደው ኣብል (Stop)' : '📜 ብትግርኛ ተዛረቡ'}
                     </span>
                   </button>
 

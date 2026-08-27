@@ -317,8 +317,8 @@ export const REGIONAL_GEO_CLUSTERS: GeoLocationCluster[] = [
     name: 'Asmara',
     nameTi: 'ኣስመራ',
     region: 'eritrea',
-    regionLabel: 'Capital of Eritrea',
-    regionLabelTi: 'ርእሰ ከተማ ኤርትራ',
+    regionLabel: 'Regional Commercial Hub',
+    regionLabelTi: 'ናይ ቀጠናዊ ማእከል',
     x: 46,
     y: 8,
     openingsCount: 12,
@@ -328,8 +328,8 @@ export const REGIONAL_GEO_CLUSTERS: GeoLocationCluster[] = [
       { en: 'Education & Secondary Teaching', ti: 'መምህርነትን ትምህርትን' },
       { en: 'Public Infrastructure', ti: 'ህዝባዊ ትሕተ-ቅርጺ' }
     ],
-    avgSalary: '25,000 - 40,000 ERN / mo',
-    avgSalaryTi: '25,000 - 40,000 ናቕፋ / ወርሒ',
+    avgSalary: '25,000 - 40,000 ETB / mo',
+    avgSalaryTi: '25,000 - 40,000 ብር / ወርሒ',
     activeOpportunities: [
       'General Medical Practitioner',
       'Hospital Clinical Pharmacist',
@@ -647,7 +647,7 @@ export const EthiopiaTigrayJobHeatmap: React.FC<EthiopiaTigrayJobHeatmapProps> =
                 textAnchor="middle"
                 opacity="0.7"
               >
-                ERITREA (ኤርትራ)
+                REGIONAL (ቀጠና)
               </text>
 
               {/* Transit & Trade Route Connectors (Dotted Logistics Lines) */}
@@ -799,7 +799,7 @@ export const EthiopiaTigrayJobHeatmap: React.FC<EthiopiaTigrayJobHeatmapProps> =
               </div>
               <div className="flex items-center space-x-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block shadow-xs" />
-                <span className="text-slate-300 font-bold">{language === 'ti' ? 'ኤርትራ' : 'Eritrea'}</span>
+                <span className="text-slate-300 font-bold">{language === 'ti' ? 'ትግራይ (ቀጠና)' : 'Regional'}</span>
               </div>
             </div>
 

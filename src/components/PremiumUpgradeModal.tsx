@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, UserRole } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { ModernCheckoutView } from './ModernCheckoutView';
 
 interface PremiumUpgradeModalProps {
   isOpen: boolean;
@@ -68,7 +69,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
 
       // Upgrade user role in state
       if (user && onUpdateUser) {
-        const updatedRole: UserRole = user.role === 'Admin' ? 'Admin' : 'ኤርትራዊ AI Pro';
+        const updatedRole: UserRole = user.role === 'Admin' ? 'Admin' : 'ኣክሱማይት AI Pro';
         onUpdateUser({
           ...user,
           role: updatedRole,
@@ -78,8 +79,8 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
 
       setSuccessMsg(
         language === 'ti'
-          ? `እንቋዕ ናብ ኤርትራዊ AI PRO ብደሓን መጻእኹም! (${billingCycle === 'yearly' ? 'ዓመታዊ' : 'ወርሓዊ'})`
-          : `Welcome to Eritrean AI PRO! (${billingCycle.toUpperCase()} Plan Activated)`
+          ? `እንቋዕ ናብ ኣክሱማይት AI PRO ብደሓን መጻእኹም! (${billingCycle === 'yearly' ? 'ዓመታዊ' : 'ወርሓዊ'})`
+          : `Welcome to Axumite AI PRO! (${billingCycle.toUpperCase()} Plan Activated)`
       );
 
       if (onSuccess) {
@@ -106,7 +107,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
     setTimeout(() => {
       setIsRestoring(false);
       if (user && onUpdateUser) {
-        const updatedRole: UserRole = user.role === 'Admin' ? 'Admin' : 'ኤርትራዊ AI Pro';
+        const updatedRole: UserRole = user.role === 'Admin' ? 'Admin' : 'ኣክሱማይት AI Pro';
         onUpdateUser({
           ...user,
           role: updatedRole,
@@ -149,12 +150,12 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
             <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
           </button>
 
-          {/* Centered Pill Badge: ★ ERITREAN AI PRO matching screenshot */}
+          {/* Centered Pill Badge: ★ AXUMITE AI PRO */}
           <div className="flex-1 flex justify-center px-2">
             <div className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-full border border-[#D97706]/50 bg-amber-500/10 dark:bg-amber-500/15 text-[#B45309] dark:text-[#FBBF24] shadow-xs">
               <Star className="w-3.5 h-3.5 fill-[#D97706] text-[#D97706]" />
               <span className="text-[12px] sm:text-[13px] font-black uppercase tracking-wider font-mono">
-                ERITREAN AI PRO
+                {language === 'ti' ? 'ኣክሱማይት AI PRO' : 'AXUMITE AI PRO'}
               </span>
             </div>
           </div>
@@ -223,7 +224,7 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
 
               {/* 2. Main Title */}
               <h2 className="text-xl sm:text-2xl font-black text-center text-[#0B1426] dark:text-white mt-4 tracking-tight leading-snug">
-                {language === 'ti' ? 'ምሉእ ዓቕሚ ናይ ኤርትራዊ AI ረኸቡ' : 'Unlock the Full Power of Eritrean AI'}
+                {language === 'ti' ? 'ምሉእ ዓቕሚ ናይ ኣክሱማይት AI ረኸቡ' : 'Unlock the Full Power of Axumite AI'}
               </h2>
 
               {/* 3. Subtitle */}
@@ -452,79 +453,66 @@ export const PremiumUpgradeModal: React.FC<PremiumUpgradeModalProps> = ({
 
             {/* Dynamic Card / Payment Input Details */}
             {paymentMethod === 'card' ? (
-              <div className="space-y-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                <div>
-                  <label className="text-[10.5px] font-bold text-slate-400 block mb-1 uppercase">Card Number</label>
-                  <div className="relative flex items-center">
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
-                    <CreditCard className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-slate-400 block mb-1 uppercase">Expiry</label>
-                    <input
-                      type="text"
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10.5px] font-bold text-slate-400 block mb-1 uppercase">CVC</label>
-                    <input
-                      type="text"
-                      value={cardCvc}
-                      onChange={(e) => setCardCvc(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                <label className="text-[10.5px] font-bold text-slate-400 block uppercase">
-                  {paymentMethod === 'telebirr' ? 'Telebirr Phone Number' : 'Eritrea Account / Mobile'}
-                </label>
-                <input
-                  type="text"
-                  value={phonePayment}
-                  onChange={(e) => setPhonePayment(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+              <div className="flex justify-center">
+                <ModernCheckoutView
+                  user={user}
+                  planName={billingCycle === 'yearly' ? 'Sovereign Pro (Annual)' : 'Sovereign Pro (Monthly)'}
+                  planId={billingCycle === 'yearly' ? 'pro_yearly' : 'pro_monthly'}
+                  amountFormatted={currentPrice}
+                  rawAmount={billingCycle === 'yearly' ? 79.99 : 9.99}
+                  currency="USD"
+                  billingCycle={billingCycle}
+                  withTrial={true}
+                  onBack={() => setViewStep('showcase')}
+                  onManageOtherMethods={() => setPaymentMethod('telebirr')}
+                  onSuccess={(receipt) => {
+                    if (onSuccess) {
+                      onSuccess(billingCycle, receipt);
+                    }
+                    onClose();
+                  }}
                 />
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                  <label className="text-[10.5px] font-bold text-slate-400 block uppercase">
+                    {paymentMethod === 'telebirr' ? 'Telebirr Phone Number' : 'Eritrea Account / Mobile'}
+                  </label>
+                  <input
+                    type="text"
+                    value={phonePayment}
+                    onChange={(e) => setPhonePayment(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Bottom Checkout Actions */}
+                <div className="pt-2 space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleSubscribe}
+                    disabled={isProcessing}
+                    className="w-full py-4 px-6 rounded-full bg-gradient-to-r from-[#D97706] via-[#EA580C] to-[#D97706] hover:brightness-110 active:scale-[0.99] disabled:opacity-50 text-white font-black text-base tracking-tight shadow-xl shadow-amber-600/30 flex items-center justify-center space-x-2 transition-all cursor-pointer"
+                  >
+                    <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+                    <span>
+                      {isProcessing
+                        ? (language === 'ti' ? 'ክፍሊት ይፍጸም ኣሎ...' : 'Processing Payment...')
+                        : `${language === 'ti' ? 'ክፈል እሞ ጀምር' : 'Pay & Activate'} ${currentPrice}${pricePeriod}`}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setViewStep('showcase')}
+                    className="w-full py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-center cursor-pointer"
+                  >
+                    {language === 'ti' ? '← ናብ መብርሂ ተመለስ' : '← Back to Overview'}
+                  </button>
+                </div>
+              </div>
             )}
-
-            {/* Bottom Checkout Actions */}
-            <div className="pt-2 space-y-2">
-              <button
-                type="button"
-                onClick={handleSubscribe}
-                disabled={isProcessing}
-                className="w-full py-4 px-6 rounded-full bg-gradient-to-r from-[#D97706] via-[#EA580C] to-[#D97706] hover:brightness-110 active:scale-[0.99] disabled:opacity-50 text-white font-black text-base tracking-tight shadow-xl shadow-amber-600/30 flex items-center justify-center space-x-2 transition-all cursor-pointer"
-              >
-                <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
-                <span>
-                  {isProcessing
-                    ? (language === 'ti' ? 'ክፍሊት ይፍጸም ኣሎ...' : 'Processing Payment...')
-                    : `${language === 'ti' ? 'ክፈል እሞ ጀምር' : 'Pay & Activate'} ${currentPrice}${pricePeriod}`}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setViewStep('showcase')}
-                className="w-full py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white text-center cursor-pointer"
-              >
-                {language === 'ti' ? '← ናብ መብርሂ ተመለስ' : '← Back to Overview'}
-              </button>
-            </div>
 
           </div>
         )}

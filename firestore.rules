@@ -2,52 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Connection test document
+    match /test/{testId} {
+      allow read: if true;
+    }
+
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     // Helper function to check if user is Superadmin Becky Love
     function isSuperAdmin() {
-      return request.auth != null && (
+      return isSignedIn() && (
         request.auth.token.email == 'beckylove2004@gmail.com' ||
         request.auth.token.email == 'BeckyLove2004@gmail.com'
       );
     }
 
     // Helper function to check if user is accessing their own data
-    function isOwner(userId) {
-      return request.auth != null && (
+    function isUserOwner(userId) {
+      return isSignedIn() && (
         request.auth.uid == userId || 
-        (request.auth.token.email != null && userId == request.auth.token.email.replace('[^a-zA-Z0-9]', '_')) ||
         isSuperAdmin()
       );
     }
 
     // User Profile Rules
     match /users/{userId} {
-      allow read: if isOwner(userId) || isSuperAdmin();
-      allow write: if isOwner(userId) || isSuperAdmin();
+      allow read: if isUserOwner(userId) || isSuperAdmin() || isSignedIn();
+      allow write: if isUserOwner(userId) || isSuperAdmin() || isSignedIn();
       
       // Conversations Subcollection
       match /conversations/{conversationId} {
-        allow read, write: if isOwner(userId) || isSuperAdmin();
+        allow read, write: if isUserOwner(userId) || isSuperAdmin() || isSignedIn();
       }
 
       // User Private Files Subcollection
       match /files/{fileId} {
-        allow read, write: if isOwner(userId) || isSuperAdmin();
+        allow read, write: if isUserOwner(userId) || isSuperAdmin() || isSignedIn();
       }
     }
 
     // Direct User Files Collection with ownership verification
     match /userFiles/{fileId} {
-      allow read: if request.auth != null && (
+      allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid || 
         resource.data.userEmail == request.auth.token.email || 
         isSuperAdmin()
       );
-      allow create: if request.auth != null && (
+      allow create: if isSignedIn() && (
         request.resource.data.userId == request.auth.uid || 
         request.resource.data.userEmail == request.auth.token.email || 
         isSuperAdmin()
       );
-      allow update, delete: if request.auth != null && (
+      allow update, delete: if isSignedIn() && (
         resource.data.userId == request.auth.uid || 
         resource.data.userEmail == request.auth.token.email || 
         isSuperAdmin()
@@ -56,29 +65,32 @@ service cloud.firestore {
 
     // Payment and Refill Records
     match /payments/{paymentId} {
-      allow read: if request.auth != null && (
+      allow read: if isSignedIn() && (
         resource.data.userId == request.auth.uid || 
         resource.data.user_id == request.auth.uid ||
         resource.data.customerEmail == request.auth.token.email || 
         resource.data.user_email == request.auth.token.email ||
         isSuperAdmin()
       );
-      allow write: if request.auth != null || isSuperAdmin();
+      allow create, update: if isSignedIn() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // Active Subscriptions and Entitlements
     match /subscriptions/{subscriptionId} {
-      allow read: if request.auth != null && (
+      allow read: if isSignedIn() && (
         resource.data.user_id == request.auth.uid || 
         resource.data.user_email == request.auth.token.email || 
         isSuperAdmin()
       );
-      allow write: if request.auth != null || isSuperAdmin();
+      allow create, update: if isSignedIn() || isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
-    // Public / Fallback rule
+    // Fallback default deny
     match /{document=**} {
       allow read, write: if isSuperAdmin();
     }
   }
 }
+

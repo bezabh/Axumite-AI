@@ -694,7 +694,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
           <div className="flex items-center space-x-1.5 text-[11px]">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>
-              {language === 'ti' ? 'ንኤርትራውያን ዝተዳለወ ሓበሬታታትን ዕድላትን' : 'Curated intelligence & opportunities for Eritreans'}
+              {language === 'ti' ? 'ንተጋሩ ዝተዳለወ ሓበሬታታትን ዕድላትን' : 'Curated intelligence & opportunities for Tigray & Diaspora'}
             </span>
           </div>
 

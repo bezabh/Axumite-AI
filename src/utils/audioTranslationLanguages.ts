@@ -9,7 +9,16 @@ export interface AudioTranslationLanguage {
 }
 
 export const AUDIO_TRANSLATION_LANGUAGES: AudioTranslationLanguage[] = [
-  // ⭐ Popular Languages (Matching User Screenshot exactly)
+  // ⭐ Popular Languages
+  {
+    id: 'ti',
+    name: 'Tigrinya',
+    nativeName: 'ትግርኛ',
+    tigrinyaCountry: 'ትግርኛ',
+    flag: '📜',
+    speechCode: 'ti-ER',
+    isPopular: true,
+  },
   {
     id: 'en',
     name: 'English',

@@ -9,8 +9,8 @@ export interface LanguageOption {
 
 export const ALL_INTERNATIONAL_LANGUAGES: LanguageOption[] = [
   // 1. Horn of Africa & Semitic
-  { code: 'ti', name: 'Tigrinya', nativeName: 'ትግርኛ', category: 'Horn of Africa & Semitic', flag: '🇪🇷', script: 'Ge\'ez Fidel' },
-  { code: 'gez', name: 'Ge\'ez', nativeName: 'ግዕዝ (Ancient Ethiopic)', category: 'Horn of Africa & Semitic', flag: '🏛️', script: 'Ge\'ez Fidel' },
+  { code: 'ti', name: 'Tigrinya', nativeName: 'ትግርኛ', category: 'Horn of Africa & Semitic', flag: '📜', script: 'Ge\'ez Fidel' },
+  { code: 'gez', name: 'Ge\'ez', nativeName: 'ግዕዝ (Ancient Ethiopic)', category: 'Horn of Africa & Semitic', flag: '📜', script: 'Ge\'ez Fidel' },
   { code: 'am', name: 'Amharic', nativeName: 'አማርኛ', category: 'Horn of Africa & Semitic', flag: '🇪🇹', script: 'Ge\'ez Fidel' },
   { code: 'om', name: 'Oromo', nativeName: 'Afaan Oromoo', category: 'Horn of Africa & Semitic', flag: '🇪🇹', script: 'Latin' },
   { code: 'so', name: 'Somali', nativeName: 'Af-Soomaali', category: 'Horn of Africa & Semitic', flag: '🇸🇴', script: 'Latin' },
@@ -79,14 +79,11 @@ export const ALL_INTERNATIONAL_LANGUAGES: LanguageOption[] = [
 export const POPULAR_LANGUAGE_PAIRS = [
   { source: 'English', target: 'Tigrinya', label: 'English ➔ ትግርኛ (Tigrinya)' },
   { source: 'Tigrinya', target: 'English', label: 'ትግርኛ ➔ English' },
-  { source: 'English', target: 'Ge\'ez', label: 'English ➔ ግዕዝ (Ge\'ez Script)' },
   { source: 'Tigrinya', target: 'Ge\'ez', label: 'ትግርኛ ➔ ግዕዝ (Ge\'ez)' },
-  { source: 'Tigrinya', target: 'German', label: 'ትግርኛ ➔ Deutsch (German)' },
-  { source: 'Tigrinya', target: 'Italian', label: 'ትግርኛ ➔ Italiano (Italian)' },
-  { source: 'Tigrinya', target: 'Arabic', label: 'ትግርኛ ➔ العربية (Arabic)' },
-  { source: 'Tigrinya', target: 'French', label: 'ትግርኛ ➔ Français (French)' },
-  { source: 'Tigrinya', target: 'Swedish', label: 'ትግርኛ ➔ Svenska (Swedish)' },
-  { source: 'Tigrinya', target: 'Norwegian', label: 'ትግርኛ ➔ Norsk (Norwegian)' },
-  { source: 'Tigrinya', target: 'Dutch', label: 'ትግርኛ ➔ Nederlands (Dutch)' },
+  { source: 'English', target: 'Ge\'ez', label: 'English ➔ ግዕዝ (Ge\'ez Script)' },
   { source: 'Amharic', target: 'Tigrinya', label: 'አማርኛ ➔ ትግርኛ' },
+  { source: 'Tigrinya', target: 'German', label: 'ትግርኛ ➔ Deutsch' },
+  { source: 'Tigrinya', target: 'Arabic', label: 'ትግርኛ ➔ العربية (Arabic)' },
+  { source: 'Tigrinya', target: 'Italian', label: 'ትግርኛ ➔ Italiano (Italian)' },
+  { source: 'Tigrinya', target: 'Swedish', label: 'ትግርኛ ➔ Svenska (Swedish)' },
 ];

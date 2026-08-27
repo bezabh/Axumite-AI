@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, GraduationCap, Globe, ExternalLink, Search, Sparkles, 
@@ -6,582 +6,21 @@ import {
   FileText, Send, Loader2, Copy, Check, ChevronRight, HelpCircle,
   Building2, Layers, BookmarkPlus, ArrowUpRight, Compass, Shield,
   Clock, Flame, AlertTriangle, Timer, Hourglass, CalendarClock,
-  ArrowUpDown, CheckCircle, Info
+  ArrowUpDown, CheckCircle, Info, Radio, RefreshCw, MapPin
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { UserProfile, SavedItem } from '../types';
-
-export type DeadlineUrgency = 'urgent' | 'approaching' | 'upcoming' | 'rolling';
-
-export interface Scholarship {
-  id: string;
-  title: string;
-  titleTi: string;
-  provider: string;
-  country: string;
-  countryTi: string;
-  degreeLevel: 'Bachelor' | 'Master' | 'PhD' | 'All' | 'Postdoc';
-  fundingType: 'Fully Funded' | 'Partial' | 'Tuition Waiver';
-  fundingTypeTi: string;
-  coverage: string[];
-  coverageTi: string[];
-  officialUrl: string;
-  deadline: string;
-  deadlineDate?: string; // ISO format e.g. '2026-09-30'
-  urgency: DeadlineUrgency;
-  urgencyLabel?: string;
-  urgencyLabelTi?: string;
-  description: string;
-  descriptionTi: string;
-  eligibility: string[];
-  eligibilityTi: string[];
-  tags: string[];
-}
-
-export interface DeadlineInfo {
-  urgency: DeadlineUrgency;
-  badgeClass: string;
-  dotClass: string;
-  borderClass: string;
-  bgGlow: string;
-  daysRemaining: number | null;
-  hoursRemaining: number | null;
-  formattedCountdown: string;
-  formattedCountdownTi: string;
-  statusLabel: string;
-  statusLabelTi: string;
-  progressPercent: number;
-}
-
-export function calculateDeadlineInfo(sch: Scholarship, now = new Date()): DeadlineInfo {
-  if (sch.urgency === 'rolling' || !sch.deadlineDate) {
-    return {
-      urgency: 'rolling',
-      badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
-      dotClass: 'bg-emerald-400',
-      borderClass: 'border-emerald-500/30',
-      bgGlow: 'from-emerald-950/20 to-transparent',
-      daysRemaining: null,
-      hoursRemaining: null,
-      formattedCountdown: 'Open Year-Round',
-      formattedCountdownTi: 'ዓመቱን ምሉእ ክፉት እዩ',
-      statusLabel: 'Rolling Admissions',
-      statusLabelTi: 'ቀጻሊ ምዝገባ (Rolling)',
-      progressPercent: 100,
-    };
-  }
-
-  const target = new Date(sch.deadlineDate);
-  const diffMs = target.getTime() - now.getTime();
-  const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const totalHours = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-
-  if (totalDays <= 45 && totalDays > 0) {
-    return {
-      urgency: 'urgent',
-      badgeClass: 'bg-rose-500/25 text-rose-200 border-rose-500/60 shadow-xs shadow-rose-950/40',
-      dotClass: 'bg-rose-400 animate-ping',
-      borderClass: 'border-rose-500/50',
-      bgGlow: 'from-rose-950/30 to-transparent',
-      daysRemaining: totalDays,
-      hoursRemaining: totalHours,
-      formattedCountdown: `${totalDays}d ${totalHours}h remaining`,
-      formattedCountdownTi: `${totalDays} መዓልትን ${totalHours} ሰዓትን ተሪፉ`,
-      statusLabel: `Closing Soon (${totalDays} Days Left)`,
-      statusLabelTi: `ቀልጢፍካ መልክት (${totalDays} መዓልቲ ተሪፉ)`,
-      progressPercent: Math.max(15, Math.min(95, 100 - (totalDays / 45) * 80)),
-    };
-  } else if (totalDays <= 90 && totalDays > 45) {
-    return {
-      urgency: 'approaching',
-      badgeClass: 'bg-amber-500/20 text-amber-200 border-amber-500/50',
-      dotClass: 'bg-amber-400',
-      borderClass: 'border-amber-500/40',
-      bgGlow: 'from-amber-950/20 to-transparent',
-      daysRemaining: totalDays,
-      hoursRemaining: totalHours,
-      formattedCountdown: `${totalDays} days left`,
-      formattedCountdownTi: `${totalDays} መዓልታት ተሪፉ`,
-      statusLabel: `Open Now (${totalDays} Days Left)`,
-      statusLabelTi: `ክፉት ኣሎ (${totalDays} መዓልቲ)`,
-      progressPercent: Math.max(20, Math.min(75, 100 - (totalDays / 90) * 60)),
-    };
-  } else {
-    return {
-      urgency: 'upcoming',
-      badgeClass: 'bg-sky-500/20 text-sky-200 border-sky-500/50',
-      dotClass: 'bg-sky-400',
-      borderClass: 'border-sky-500/30',
-      bgGlow: 'from-sky-950/20 to-transparent',
-      daysRemaining: totalDays > 0 ? totalDays : null,
-      hoursRemaining: totalHours,
-      formattedCountdown: totalDays > 0 ? `${totalDays} days to deadline` : 'Upcoming Cycle',
-      formattedCountdownTi: totalDays > 0 ? `ኣብ ${totalDays} መዓልቲ ይዕጾ` : 'ቀጻሊ ዙር ምዝገባ',
-      statusLabel: 'Upcoming Cycle',
-      statusLabelTi: 'ቀጻሊ ዙር (Upcoming)',
-      progressPercent: 25,
-    };
-  }
-}
-
-export interface ChecklistItem {
-  id: string;
-  title: string;
-  titleTi: string;
-  category: 'core' | 'academic' | 'identity' | 'optional';
-  categoryLabel: string;
-  categoryLabelTi: string;
-  description: string;
-  descriptionTi: string;
-  tips: string;
-  tipsTi: string;
-  importance: 'mandatory' | 'recommended';
-}
-
-export const SCHOLARSHIP_CHECKLIST_ITEMS: ChecklistItem[] = [
-  {
-    id: 'transcripts',
-    title: 'Academic Transcripts & Degree Certificates',
-    titleTi: 'ናይ ትምህርቲ ሰነዳትን ትራንስክሪፕትን (Transcripts & Degrees)',
-    category: 'academic',
-    categoryLabel: 'Academic Records',
-    categoryLabelTi: 'ናይ ትምህርቲ ሰነዳት',
-    description: 'Official high school or university transcripts in English, notarized and stamped with grading rubric.',
-    descriptionTi: 'ናይ 12 ክፍሊ ሰርቲፊኬት ወይ ናይ ኮሌጅ/ዩኒቨርሲቲ ኦፊሽያል ትራንስክሪፕት ብእንግሊዝኛ ዝተተርጎመን ብማሕተም ዝተረጋገጸን።',
-    tips: 'Include clear conversion tables if your university uses non-standard GPA scales.',
-    tipsTi: 'ናይ GPA መለክዒ ፎርሙላ እንተተተሓሒዙ ተመራጺ እዩ።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'sop',
-    title: 'Statement of Purpose / Motivation Essay',
-    titleTi: 'ናይ ድራኸ ደብዳበ (Statement of Purpose / SOP)',
-    category: 'core',
-    categoryLabel: 'Essays & Pitch',
-    categoryLabelTi: 'ናይ ድራኸ ጽሑፋት',
-    description: 'A 500–1000 word tailored narrative articulating academic motivations, research interests, and community return plan.',
-    descriptionTi: 'ስለምንታይ ነዚ ዓውዲ መሪጽኩም፧ ንመጻኢ ሃገርኩምን ማሕበረሰብኩምን ብኸመይ ትጠቕሙ፧ ዘብርህ ውልቃዊ ድርሳን።',
-    tips: 'Use our AI SOP Drafter tab to generate a tailored outline for your specific program.',
-    tipsTi: 'ኣብዚ ሞዳል ዘሎ ናይ AI SOP Drafter ተጠቒምኩም ድርሳንኩም ኣዳልዉ።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'lor',
-    title: '2–3 Recommendation Letters (LOR)',
-    titleTi: 'ናይ መምህራን ምስክርነት (Letters of Recommendation)',
-    category: 'academic',
-    categoryLabel: 'Endorsements',
-    categoryLabelTi: 'ምስክርነት መምህራን',
-    description: 'Confidential reference letters on institutional letterhead signed by professors or direct workplace supervisors.',
-    descriptionTi: 'ካብ 2 ክሳብ 3 መምህራን ወይ ናይ ስራሕ ሓለፍቲ ዝወሃብ ንጸባይኩምን ብቕዓትኩምን ዝምስክር ደብዳበ (LOR)።',
-    tips: 'Request letters at least 3-4 weeks ahead of the deadline.',
-    tipsTi: 'ቅድሚ ምዕጻው ዕለት ብውሑዱ 3-4 ሳምንታት ኣቐዲምኩም ንመምህራንኩም ሕተቱ።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'cv',
-    title: 'Academic CV / Europass Resume',
-    titleTi: 'ሞያዊ CV / Resume (Europass / Standard)',
-    category: 'core',
-    categoryLabel: 'Profile',
-    categoryLabelTi: 'ሞያዊ መግለጺ',
-    description: 'A structured 1–2 page resume detailing educational background, volunteer initiatives, publications, and awards.',
-    descriptionTi: 'ናይ ትምህርቲ፣ ስራሕ፣ ፍቓደኝነትን (Volunteer) ኣድላይነት ዘለዎም ስልጠናታትን ዘጠቓለለ ንጹር CV።',
-    tips: 'Quantify leadership experiences with measurable outcomes and project titles.',
-    tipsTi: 'ዘካየድኩምዎም ፕሮጀክትታትን መሪሕነታዊ ተሳትፎን ብግልጺ ጥቐሱ።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'language',
-    title: 'English Proficiency (IELTS / TOEFL / MOI Letter)',
-    titleTi: 'ናይ ቋንቋ እንግሊዝ መረጋገጺ (English Proficiency / MOI)',
-    category: 'academic',
-    categoryLabel: 'Language',
-    categoryLabelTi: 'ቋንቋ',
-    description: 'Valid IELTS/TOEFL score certificate or official "Medium of Instruction (MOI)" English verification letter.',
-    descriptionTi: 'IELTS / TOEFL ወይ ካብ ዩኒቨርሲቲኹም "English as Medium of Instruction (MOI)" ዝብል ወግዓዊ ደብዳበ።',
-    tips: 'Many European and Asian programs waive test scores if your degree was taught in English.',
-    tipsTi: 'ቀዳማይ ዲግሪኹም ብእንግሊዝኛ እንተተማሂርኩም ብ MOI ወረቐት ክቕበሉኹም ይኽእሉ እዮም።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'passport',
-    title: 'Valid International Passport',
-    titleTi: 'ፓስፖርት (Valid Passport)',
-    category: 'identity',
-    categoryLabel: 'Identity & Travel',
-    categoryLabelTi: 'መንነትን ፓስፖርትን',
-    description: 'Color scan of personal information and photo pages with at least 6 months validity from intake date.',
-    descriptionTi: 'እንተወሓደ 6 ወርሒ ወይ ልዕሊኡ ዝጸንሕ ዘበነ-ዕድመ ዘለዎ ዓለምለኸ ፓስፖርት።',
-    tips: 'Ensure all 4 corners of the bio page are clearly visible with zero glare.',
-    tipsTi: 'ናይቲ ፓስፖርት ኣርባዕቲኡ ጫፍ ብንጹር ዝረአ ምዃኑ ኣረጋግጹ።',
-    importance: 'mandatory',
-  },
-  {
-    id: 'portfolio',
-    title: 'Research Proposal or Creative Portfolio',
-    titleTi: 'ናይ ምርምር ሓሳብ ወይ ፖርትፎልዮ (Research Proposal / Portfolio)',
-    category: 'optional',
-    categoryLabel: 'Research & Work',
-    categoryLabelTi: 'ምርምርን ስራሕን',
-    description: 'Required for PhD / Research Master applicants and Arts/Architecture disciplines.',
-    descriptionTi: 'ንዶክተርነት (PhD) ወይ ምርምር ንዝመሃሩ ተመሃሮ ዘድሊ ናይ መጽናዕቲ ውጥን ወይ ናይ ስነ-ጥበብ ስራሓት።',
-    tips: 'Align your research questions with faculty mentors listed at the target institution.',
-    tipsTi: 'ኣብቲ ዩኒቨርሲቲ ካብ ዘለዉ ፕሮፌሰራት ምርምር ምስ ዘካይድ ምትእስሳር ፍጠሩ።',
-    importance: 'recommended',
-  },
-  {
-    id: 'financial',
-    title: 'Financial Need Affidavit / Declaration',
-    titleTi: 'ናይ ቁጠባዊ ደገፍ መግለጺ (Financial Need Statement)',
-    category: 'optional',
-    categoryLabel: 'Financial Eligibility',
-    categoryLabelTi: 'ቁጠባዊ ደገፍ',
-    description: 'Demonstrates economic background or humanitarian displacement status for need-based grants (e.g. Mastercard Foundation, DAFI).',
-    descriptionTi: 'ብፍላይ ንMastercard Foundationን DAFIን ዘድሊ ናይ ስድራቤት ቁጠባዊ ኲነታት ወይ ናይ ስደተኛ መረጋገጺ።',
-    tips: 'Provide clear, verifiable context regarding financial obstacles.',
-    tipsTi: 'ናይ ቁጠባዊ ጸገምኩም ብግልጺ ዘብርህ ሰነድ ኣተሓሕዙ።',
-    importance: 'recommended',
-  },
-];
-
-export const SCHOLARSHIPS_DATA: Scholarship[] = [
-  {
-    id: 'fulbright',
-    title: 'Fulbright Foreign Student Program',
-    titleTi: 'ፉልብራይት ናይ ኣሜሪካ መንግስቲ ስኮላርሺፕ (Fulbright)',
-    provider: 'U.S. Department of State',
-    country: 'United States (USA)',
-    countryTi: 'ሕቡራት መንግስታት ኣሜሪካ (USA)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['100% Tuition Fees', 'Monthly Living Stipend', 'Round-trip Airfare', 'Health Insurance', 'Book Allowance'],
-    coverageTi: ['ሙሉእ ክፍሊት ትምህርቲ (100%)', 'ናይ ወርሒ ናብራ መነባበሪ ገንዘብ', 'ናይ ነፋሪት ትኬት (መመለሲ ሓዊሱ)', 'ናይ ጥዕና መድሕን', 'ናይ መጻሕፍቲ ደገፍ'],
-    officialUrl: 'https://foreign.fulbrightonline.org/',
-    deadline: 'Annually (Feb - Oct by Country)',
-    deadlineDate: '2026-10-15',
-    urgency: 'urgent',
-    urgencyLabel: 'Closing Soon (Country Tracks)',
-    urgencyLabelTi: 'ቀልጢፍካ መልክት (Closing Soon)',
-    description: 'Enables graduate students, young professionals, and artists from abroad to study and conduct research in the United States.',
-    descriptionTi: 'ንብቑዓት ተመሃሮን ሰብ ሞያን ኣብ ሕቡራት መንግስታት ኣሜሪካ ካልኣይ ዲግሪ (Master) ንምምሃር ዝወሃብ ዓለምለኸ ዝኸበረ ናይ መንግስቲ ኣሜሪካ ስኮላርሺፕ እዩ።',
-    eligibility: ['Bachelor’s degree completed', 'Strong academic record', 'Leadership potential', 'English proficiency'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ ዝወደአ', 'ጽቡቕ ናይ ትምህርቲ ውጽኢት (GPA)', 'ናይ መሪሕነት ክእለት', 'ናይ እንግሊዝኛ ቋንቋ ክእለት'],
-    tags: ['USA', 'Fully Funded', 'Masters', 'Prestigious', 'Global'],
-  },
-  {
-    id: 'chevening',
-    title: 'Chevening Scholarships',
-    titleTi: 'ቼቨኒንግ ናይ ዓባይ ብሪጣንያ መንግስቲ ስኮላርሺፕ (Chevening UK)',
-    provider: 'UK Foreign, Commonwealth & Development Office (FCDO)',
-    country: 'United Kingdom (UK)',
-    countryTi: 'ዓባይ ብሪጣንያ (United Kingdom)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full University Tuition Fees', 'Monthly Living Allowance', 'Travel to/from UK', 'Arrival Allowance', 'Visa Cost Reimbursement'],
-    coverageTi: ['ሙሉእ ናይ ዩኒቨርሲቲ ክፍሊት', 'ናይ ወርሒ ናይ መነባበሪ ኣበል', 'ናብ ዓባይ ብሪጣንያ ናይ ነፋሪት ወጻኢታት', 'ናይ ቪዛ ክፍሊት ምምላስ'],
-    officialUrl: 'https://www.chevening.org/scholarships/',
-    deadline: 'August – November Annually',
-    deadlineDate: '2026-11-05',
-    urgency: 'approaching',
-    urgencyLabel: 'Open Now (Closes Nov 5)',
-    urgencyLabelTi: 'ክፉት ኣሎ (Open Now)',
-    description: 'The UK government’s global scholarship programme, funded by the FCDO and partner organizations, for one-year master’s degrees at any UK university.',
-    descriptionTi: 'ኣብ ዝኾነ ናይ ዓባይ ብሪጣንያ ዩኒቨርሲቲ ናይ ሓደ ዓመት ካልኣይ ዲግሪ (Master’s) ንምምሃር ብመንግስቲ ዩናይትድ ኪንግደም ዝወሃብ ዝኸበረ ዕድል እዩ።',
-    eligibility: ['Undergraduate degree (2:1 or equivalent)', 'Minimum 2 years work experience (2,800 hours)', 'Commitment to return to home country for min 2 years'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ ዘለዎ', 'እንተወሓደ 2 ዓመት ናይ ስራሕ ተመኩሮ', 'ናይ መሪሕነት ራእይ ዘለዎ'],
-    tags: ['UK', 'Fully Funded', 'Masters', 'Leadership', 'All Majors'],
-  },
-  {
-    id: 'daad-epos',
-    title: 'DAAD Development-Related Postgraduate Courses (EPOS)',
-    titleTi: 'ዳኣድ ናይ ጀርመን መንግስቲ ስኮላርሺፕ (DAAD Germany)',
-    provider: 'German Academic Exchange Service (DAAD)',
-    country: 'Germany',
-    countryTi: 'ጀርመን (Germany)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Monthly stipend (€934 - €1,300)', 'Tuition fully free', 'Health & accident insurance', 'Travel allowance', 'Study & research subsidies'],
-    coverageTi: ['ናይ ወርሒ ኣበል (€934 - €1,300)', 'ናጻ ክፍሊት ትምህርቲ', 'ናይ ጥዕናን ሓደጋን መድሕን', 'ናይ ጉዕዞ ነፋሪት ክፍሊት'],
-    officialUrl: 'https://www.daad.de/en/study-and-research-in-germany/scholarships/',
-    deadline: 'August – October (Varies by Course)',
-    deadlineDate: '2026-09-30',
-    urgency: 'urgent',
-    urgencyLabel: 'Urgent: Course Deadlines',
-    urgencyLabelTi: 'ቀልጢፍካ መልክት (Urgent)',
-    description: 'Supports professionals from developing and transition countries to pursue development-related Master or PhD courses at top German state universities.',
-    descriptionTi: 'ኣብ ፍሉጣት ናይ ጀርመን ዩኒቨርሲቲታት ብእንግሊዝኛ ወይ ጀርመንኛ ካልኣይ ዲግሪ ንምስራሕ ዝወሃብ ምሉእ ደገፍ ዘለዎ ናይ ጀርመን መንግስቲ ስኮላርሺፕ።',
-    eligibility: ['Bachelor’s degree (not older than 6 years)', 'At least 2 years of professional experience', 'Academic motivation'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ (ካብ 6 ዓመት ዘይበለጸ)', 'እንተወሓደ 2 ዓመት ሞያዊ ተመኩሮ', 'ሓያል ናይ ትምህርቲ ድራኸ'],
-    tags: ['Germany', 'Europe', 'Masters', 'PhD', 'Engineering', 'Economics'],
-  },
-  {
-    id: 'mastercard-fdn',
-    title: 'Mastercard Foundation Scholars Program',
-    titleTi: 'ማስተርካርድ ፋውንዴሽን ስኮላርሺፕ (Mastercard Foundation)',
-    provider: 'Mastercard Foundation & Global Partner Universities',
-    country: 'Global (USA, UK, Canada, Africa, France)',
-    countryTi: 'ዓለምለኸ (ኣሜሪካ፣ ካናዳ፣ ዓባይ ብሪጣንያ፣ ኣፍሪቃ)',
-    degreeLevel: 'All',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Comprehensive)',
-    coverage: ['Full Tuition & Living Expenses', 'Books & Learning Materials', 'Accommodation & Laptop', 'Mentorship & Career Placement', 'Airfare'],
-    coverageTi: ['ሙሉእ ክፍሊት ትምህርትን መነባበሪን', 'መጻሕፍትን ላፕቶፕን', 'ናይ መንበሪ ቦታ', 'ሞያዊ ስልጠናን ናይ ነፋሪት ወጻኢን'],
-    officialUrl: 'https://mastercardfdn.org/all/scholars/',
-    deadline: 'Varies by Partner University (Sep - Feb)',
-    deadlineDate: '2026-12-15',
-    urgency: 'approaching',
-    urgencyLabel: 'Fall Window Open',
-    urgencyLabelTi: 'ናይ ቀውዒ ዙር ክፉት',
-    description: 'Enables bright young African and global leaders with high economic need to complete undergraduate and graduate education worldwide.',
-    descriptionTi: 'ንጎበዛት መንእሰያት ኣብ ፍሉጣት ዓለምለኻውያን ዩኒቨርሲቲታት (Oxford, Edinburgh, McGill, UC Berkeley, AIMS) ቀዳማይን ካልኣይን ዲግሪ ንኽመሃሩ ዝወሃብ ዓቢ ዕድል እዩ።',
-    eligibility: ['Academic talent', 'Demonstrated financial need', 'Commitment to community giveback across Africa'],
-    eligibilityTi: ['ብሉጽ ናይ ትምህርቲ ውጽኢት', 'ናይ ፋይናንስ ደገፍ ዘድልዮም ተመሃሮ', 'ንማሕበረሰብ ናይ ምግልጋል ራእይ'],
-    tags: ['Undergraduate', 'Masters', 'Fully Funded', 'Africa', 'Global'],
-  },
-  {
-    id: 'erasmus-mundus',
-    title: 'Erasmus Mundus Joint Masters Scholarships (EMJM)',
-    titleTi: 'ኢራስመስ ሙንዱስ ናይ ኤውሮጳ ሕብረት ስኮላርሺፕ (Erasmus Mundus EU)',
-    provider: 'European Commission (European Union)',
-    country: 'European Union (Multiple EU Countries)',
-    countryTi: 'ሕብረት ኤውሮጳ (ኣብ ዝተፈላለያ ሃገራት ኤውሮጳ)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full Tuition Fee Waiver', '€1,400 Monthly Living Allowance', 'Travel & Visa Allowance', 'Full Comprehensive Insurance', 'Study in 2-3 different European countries'],
-    coverageTi: ['ሙሉእ ናጻ ክፍሊት ትምህርቲ', 'ናይ ወርሒ €1,400 ናይ መነባበሪ ገንዘብ', 'ናይ ጉዕዞን ቪዛን ኣበል', 'ኣብ 2 ወይ 3 ዝተፈላለያ ናይ ኤውሮጳ ሃገራት ናይ ምምሃር ዕድል'],
-    officialUrl: 'https://erasmus-plus.ec.europa.eu/opportunities/individuals/students',
-    deadline: 'October – January / February Annually',
-    deadlineDate: '2027-01-15',
-    urgency: 'upcoming',
-    urgencyLabel: 'Opens Oct / Closes Jan',
-    urgencyLabelTi: 'ቀጻሊ ዙር (Opens Oct)',
-    description: 'High-level integrated master programmes delivered by international consortia of higher education institutions across Europe.',
-    descriptionTi: 'ኣብ ብዙሓት ናይ ኤውሮጳ ሃገራት (ፈረንሳ፣ ኢጣልያ፣ ስጳኛ፣ ጀርመን ወዘተ) እናተዘዋወርካ ዝስራሕ ፍሉይ ናይ ኤውሮጳ ሕብረት ስኮላርሺፕ እዩ።',
-    eligibility: ['Bachelor’s degree or equivalent', 'No previous Erasmus Mundus scholarship', 'Academic excellence'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ ዝወደአ', 'ቅድሚ ሕጂ ናይ ኢራስመስ ስኮላርሺፕ ዘይወሰደ', 'ብሉጽ ናይ ትምህርቲ ውጽኢት'],
-    tags: ['Europe', 'EU', 'Masters', 'Fully Funded', 'Multi-Country'],
-  },
-  {
-    id: 'turkiye-burslari',
-    title: 'Türkiye Scholarships (Türkiye Bursları)',
-    titleTi: 'ቱርክየ ቡርስላሪ ናይ ቱርኪ መንግስቲ ስኮላርሺፕ (Türkiye Bursları)',
-    provider: 'Government of Republic of Türkiye',
-    country: 'Turkey',
-    countryTi: 'ቱርኪ (Türkiye)',
-    degreeLevel: 'All',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full University Placement & Tuition', 'Monthly Stipend (Undergrad, Master, PhD)', 'Free University Dormitory Accommodation', 'Round-trip Flight Ticket', '1-Year Turkish Language Course', 'Health Insurance'],
-    coverageTi: ['ሙሉእ ዩኒቨርሲቲን ክፍሊትን', 'ናይ ወርሒ ደሞዝ/ኣበል', 'ናጻ ናይ ዩኒቨርሲቲ መንበሪ ደምበ (Dormitory)', 'ናይ ነፋሪት መመለሲ ትኬት', 'ናይ 1 ዓመት ናጻ ናይ ቱርክኛ ቋንቋ ስልጠና', 'ናይ ጥዕና መድሕን'],
-    officialUrl: 'https://www.turkiyeburslari.gov.tr/',
-    deadline: 'January 10 – February 20 Annually',
-    deadlineDate: '2027-02-20',
-    urgency: 'upcoming',
-    urgencyLabel: 'Jan 2027 Cycle',
-    urgencyLabelTi: 'ናይ ጥሪ 2027 ዙር',
-    description: 'Government-funded higher education scholarship program for international students from all countries for Bachelor, Master, and PhD degrees.',
-    descriptionTi: 'ካብ ቀዳማይ ዲግሪ ክሳብ ዶክተርነት (PhD) ኣብ ቱርኪ ብነጻ ንምምሃር ብመንግስቲ ቱርኪ ዝወሃብ ዓመታዊ ዓለምለኸ ስኮላርሺፕ።',
-    eligibility: ['Undergraduate: Minimum 70% GPA', 'Master & PhD: Minimum 75% GPA', 'Health Sciences: Minimum 90% GPA'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ፡ እንተወሓደ 70% ውጽኢት', 'ካልኣይ ዲግሪን ፒኤችዲን፡ እንተወሓደ 75% ውጽኢት', 'ሕክምና፡ እንተወሓደ 90% ውጽኢት'],
-    tags: ['Turkey', 'Undergraduate', 'Masters', 'PhD', 'Fully Funded'],
-  },
-  {
-    id: 'mext-japan',
-    title: 'MEXT Japanese Government Scholarships',
-    titleTi: 'ሜክስት ናይ ጃፓን መንግስቲ ስኮላርሺፕ (MEXT Japan)',
-    provider: 'Ministry of Education, Culture, Sports, Science and Technology (Japan)',
-    country: 'Japan',
-    countryTi: 'ጃፓን (Japan)',
-    degreeLevel: 'All',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['100% Tuition and Examination Fees', 'Monthly Allowance (143,000 - 145,000 JPY)', 'Round-trip Air Transportation', 'Preparatory Japanese Language Course'],
-    coverageTi: ['100% ናጻ ክፍሊት መርመራን ትምህርትን', 'ናይ ወርሒ ኣበል (143,000 - 145,000 የን)', 'ናይ ነፋሪት መመለሲ ትኬት', 'ናይ ጃፓንኛ ቋንቋ ምድላው ስልጠና'],
-    officialUrl: 'https://www.studyinjapan.go.jp/en/planning/scholarship/',
-    deadline: 'April – June (Embassy Track) / Oct – Dec (University Track)',
-    deadlineDate: '2026-11-30',
-    urgency: 'approaching',
-    urgencyLabel: 'University Track Open',
-    urgencyLabelTi: 'ናይ ዩኒቨርሲቲ መስመር ክፉት',
-    description: 'Offers international students the opportunity to study in Japanese universities at undergraduate, master, and doctoral levels.',
-    descriptionTi: 'ኣብ ፍሉጣት ናይ ጃፓን ዩኒቨርሲቲታት ኣብ ዝተፈላለየ ሞያታት ብነጻ ንምምሃር ዝወሃብ ናይ ጃፓን መንግስቲ ስኮላርሺፕ።',
-    eligibility: ['Undergraduate: 17–25 years old', 'Research/Graduate: Under 35 years old', 'Willingness to learn Japanese'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ፡ ዕድመ 17–25 ዓመት', 'ካልኣይ ዲግሪ/ምርምር፡ ትሕቲ 35 ዓመት', 'ጃፓንኛ ንምምሃር ድሌት ዘለዎ'],
-    tags: ['Japan', 'Asia', 'Undergraduate', 'Masters', 'PhD', 'STEM'],
-  },
-  {
-    id: 'swedish-institute',
-    title: 'Swedish Institute Scholarships for Global Professionals (SISGP)',
-    titleTi: 'ስዊዲሽ ኢንስትቲዩት ስኮላርሺፕ (Swedish Institute - Sweden)',
-    provider: 'Swedish Institute / Government of Sweden',
-    country: 'Sweden',
-    countryTi: 'ስዊድን (Sweden)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full Tuition Fees paid directly to Swedish University', 'Monthly Living Stipend (SEK 12,000)', 'Travel Grant (SEK 15,000)', 'Health & Accident Insurance', 'Membership in SI Network for Future Global Leaders'],
-    coverageTi: ['ሙሉእ ክፍሊት ዩኒቨርሲቲ ስዊድን', 'ናይ ወርሒ ናይ መነባበሪ ኣበል (12,000 ክሮነር)', 'ናይ ጉዕዞ ደገፍ (15,000 ክሮነር)', 'ናይ ጥዕናን ሓደጋን መድሕን'],
-    officialUrl: 'https://si.se/en/apply/scholarships/',
-    deadline: 'February Annually',
-    deadlineDate: '2027-02-15',
-    urgency: 'upcoming',
-    urgencyLabel: 'Opens Autumn / Closes Feb',
-    urgencyLabelTi: 'ቀጻሊ ዙር',
-    description: 'Develops global leaders by funding full master’s degree studies in Sweden, covering tuition fees and monthly living expenses.',
-    descriptionTi: 'ኣብ ስዊድን ካልኣይ ዲግሪ ብእንግሊዝኛ ንምምሃር ንሞያውያንን መራሕትን ብመንግስቲ ስዊድን ዝወሃብ ምሉእ ስኮላርሺፕ።',
-    eligibility: ['Min 3,000 hours of documented work experience', 'Demonstrated leadership experience', 'Admitted to an eligible master’s programme in Sweden'],
-    eligibilityTi: ['እንተወሓደ 3,000 ሰዓታት ናይ ስራሕ ተመኩሮ', 'ናይ መሪሕነት ታሪኽ ዘለዎ', 'ኣብ ስዊድን ዩኒቨርሲቲ ቅቡልነት ዝረኸበ'],
-    tags: ['Sweden', 'Europe', 'Masters', 'Leadership', 'Fully Funded'],
-  },
-  {
-    id: 'gates-cambridge',
-    title: 'Gates Cambridge Scholarships',
-    titleTi: 'ጌትስ ካምብሪጅ ስኮላርሺፕ (Gates Cambridge - UK)',
-    provider: 'Bill & Melinda Gates Foundation & University of Cambridge',
-    country: 'United Kingdom (University of Cambridge)',
-    countryTi: 'ዓባይ ብሪጣንያ (University of Cambridge)',
-    degreeLevel: 'PhD',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Elite Full Funding)',
-    coverage: ['Full University Composition Fee', 'Maintenance Allowance (£20,000/year)', 'Inbound & Outbound Airfare', 'Visa & Immigration Health Surcharge', 'Academic Development Funding (up to £2,000)'],
-    coverageTi: ['ሙሉእ ናይ ካምብሪጅ ዩኒቨርሲቲ ክፍሊት', 'ናይ ዓመት £20,000 ናይ መነባበሪ ገንዘብ', 'ናይ ነፋሪት ምሉእ ወጻኢታት', 'ናይ ቪዛን ጥዕናን ክፍሊት', 'ናይ ምርምርን ጉባኤታትን ደገፍ (£2,000)'],
-    officialUrl: 'https://www.gatescambridge.org/',
-    deadline: 'October (US Citizens) / December - January (International)',
-    deadlineDate: '2026-12-02',
-    urgency: 'approaching',
-    urgencyLabel: 'Open for 2027 Intake',
-    urgencyLabelTi: 'ን2027 ክፉት ዘሎ',
-    description: 'Prestigious, highly competitive scholarships for outstanding applicants from countries outside the UK to pursue a full-time postgraduate degree at the University of Cambridge.',
-    descriptionTi: 'ኣብ ዓለም ካብ ዘለዋ ዝበለጻ ዩኒቨርሲቲታት ሓንቲ ኣብ ዝኾነት ዩኒቨርሲቲ ካምብሪጅ ዶክተርነት ወይ ካልኣይ ዲግሪ ንምስራሕ ዝወሃብ ዝለዓለ ስኮላርሺፕ።',
-    eligibility: ['Outstanding intellectual ability', 'Reasons for choice of course', 'A commitment to improving the lives of others', 'Leadership capacity'],
-    eligibilityTi: ['ብሉጽ ናይ ኣእምሮን ትምህርትን ብቕዓት', 'ንማሕበረሰብ ዓለም ናይ ምልዋጥ ተወፋይነት', 'ናይ መሪሕነት ክእለት'],
-    tags: ['UK', 'Cambridge', 'PhD', 'Masters', 'Prestigious', 'Fully Funded'],
-  },
-  {
-    id: 'dafi-unhcr',
-    title: 'UNHCR DAFI Tertiary Refugee Scholarship Programme',
-    titleTi: 'ዲኤኤፍኣይ ናይ ስደተኛታትን ዲያስፖራን ስኮላርሺፕ (DAFI UNHCR)',
-    provider: 'UNHCR & German Government',
-    country: 'Global / Regional (Africa, Middle East, Asia)',
-    countryTi: 'ዓለምለኸ (ኣፍሪቃ፣ ማእከላይ ምብራቕ፣ ኤስያ)',
-    degreeLevel: 'Bachelor',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Refugee & Tertiary Support)',
-    coverage: ['Tuition Fees and Registration', 'Study Materials and Books', 'Food, Housing and Transportation Allowance', 'Academic Prep & Language Classes'],
-    coverageTi: ['ናይ ዩኒቨርሲቲ ምዝገባን ክፍሊትን', 'መጻሕፍትን ናይ ትምህርቲ ኣቑሑትን', 'ናይ መግቢ፣ መንበሪን መጓዓዝያን ኣበል', 'ናይ ቋንቋ ስልጠናታት'],
-    officialUrl: 'https://www.unhcr.org/dafi-scholarships.html',
-    deadline: 'Ongoing / Country Specific Announcements',
-    urgency: 'rolling',
-    urgencyLabel: 'Rolling / Year-Round',
-    urgencyLabelTi: 'ቀጻሊ ምዝገባ (Rolling)',
-    description: 'Enables refugee students and displaced youth to pursue higher education, university degrees, and professional certifications globally.',
-    descriptionTi: 'ንተመዛበልትን ስደተኛታትን መንእሰያት ኣብ ዝተፈላለያ ሃገራት ኣብ ዩኒቨርሲቲ ቀዳማይ ዲግሪ ንኽመሃሩ ብUNHCRን መንግስቲ ጀርመንን ዝወሃብ ዓቢ ዕድል እዩ።',
-    eligibility: ['Recognized refugee or asylum seeker status', 'High school diploma with good marks', 'Under 28 years old for undergraduate studies'],
-    eligibilityTi: ['ናይ ስደተኛ ወይ ዑቕባ መሰል ዘለዎ', 'ናይ 12 ክፍሊ ዲፕሎማ ጽቡቕ ውጽኢት ዘለዎ', 'ዕድመ ትሕቲ 28 ዓመት'],
-    tags: ['Refugee', 'Diaspora', 'Undergraduate', 'Fully Funded', 'UNHCR'],
-  },
-  {
-    id: 'kaust-fellowship',
-    title: 'KAUST Discovery Fellowship & Graduate Scholarships',
-    titleTi: 'ካውስት ናይ ሳይንስን ቴክኖሎጂን ስኮላርሺፕ (KAUST Fellowship)',
-    provider: 'King Abdullah University of Science and Technology',
-    country: 'Saudi Arabia',
-    countryTi: 'ስዑዲ ዓረብ (Saudi Arabia)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ ($20,000 - $30,000/yr)',
-    coverage: ['Full Tuition Support', 'Monthly Living Allowance ($20,000 - $30,000 annually)', 'Private On-campus Housing', 'Medical and Dental Coverage', 'Relocation and Annual Flight Support'],
-    coverageTi: ['100% ናጻ ክፍሊት ትምህርቲ', 'ናይ ዓመት $20,000 ክሳብ $30,000 መነባበሪ ደሞዝ', 'ናጻ ዘመናዊ ናይ ውልቂ መንበሪ ገዛ', 'ናይ ጥዕናን ስንን ምሉእ መድሕን', 'ናይ ነፋሪት ወጻኢታት'],
-    officialUrl: 'https://www.kaust.edu.sa/en/study/fellowship',
-    deadline: 'October – January (Spring/Fall Intake)',
-    deadlineDate: '2027-01-15',
-    urgency: 'upcoming',
-    urgencyLabel: 'Spring/Fall Cycle',
-    urgencyLabelTi: 'ናይ ጽድያ/ቀውዒ ዙር',
-    description: 'All admitted graduate students (Master & PhD) in STEM fields receive full fellowship support at one of the top research universities in the world.',
-    descriptionTi: 'ኣብ ዓውደ ሳይንስ፣ ኮምፒዩተር፣ AI፣ ባዮሎጂን ኢንጅነሪንግን ካልኣይ ዲግሪ ወይ ፒኤችዲ ንዝመሃሩ ተመሃሮ ዝወሃብ ዝለዓለ ናጻ ናይ ገንዘብን መንበሪን ደገፍ ዘለዎ ስኮላርሺፕ።',
-    eligibility: ['Degree in Science, Tech, Engineering, or Math (STEM)', 'Strong GPA and academic transcript', 'TOEFL (79+) or IELTS (6.5+)'],
-    eligibilityTi: ['ናይ STEM (ሳይንስ፣ ቴክኖሎጂ፣ ኢንጅነሪንግ፣ ሒሳብ) ዲግሪ', 'ጽቡቕ ውጽኢት GPA', 'ናይ እንግሊዝኛ ፈተና ውጽኢት'],
-    tags: ['STEM', 'Engineering', 'AI', 'Masters', 'PhD', 'Fully Funded'],
-  },
-  {
-    id: 'australia-awards',
-    title: 'Australia Awards Scholarships',
-    titleTi: 'ኦስትራልያ ኣዋርድስ ስኮላርሺፕ (Australia Awards)',
-    provider: 'Department of Foreign Affairs and Trade (DFAT Australia)',
-    country: 'Australia',
-    countryTi: 'ኦስትራልያ (Australia)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full Tuition Fees', 'Return Air Travel', 'Establishment Allowance', 'Contribution to Living Expenses (CLE)', 'Overseas Student Health Cover (OSHC)'],
-    coverageTi: ['ሙሉእ ናይ ዩኒቨርሲቲ ክፍሊት', 'ናይ መመለሲ ነፋሪት ትኬት', 'ናይ ምቛም/ምጅማር ኣበል', 'ናይ ወርሒ ናይ መነባበሪ ገንዘብ', 'ናይ ጥዕና ምሉእ መድሕን'],
-    officialUrl: 'https://www.dfat.gov.au/people-to-people/australia-awards',
-    deadline: 'February – April 30 Annually',
-    deadlineDate: '2027-04-30',
-    urgency: 'upcoming',
-    urgencyLabel: 'Opens Feb 2027',
-    urgencyLabelTi: 'ናይ ለካቲት 2027 ዙር',
-    description: 'Long-term awards administered by the Department of Foreign Affairs and Trade for full-time undergraduate or postgraduate study in Australia.',
-    descriptionTi: 'ኣብ ፍሉጣት ናይ ኦስትራልያ ዩኒቨርሲቲታት ኣብ ዝተፈላለየ ናይ ምዕባለ ዓውድታት ብምሉእ ወጻኢታት መንግስቲ ኦስትራልያ ንምምሃር ዝወሃብ ዕድል።',
-    eligibility: ['Citizen of an eligible country', 'Minimum 18 years of age', 'Committed to contributing to home country development'],
-    eligibilityTi: ['ናይ ተጠቀምቲ ሃገራት ዜጋ', 'ዕድመ ካብ 18 ንላዕሊ', 'ንሃገርካ ንምግልጋል ተወፋይነት ዘለዎ'],
-    tags: ['Australia', 'Masters', 'Undergraduate', 'Fully Funded'],
-  },
-  {
-    id: 'world-bank-scholarship',
-    title: 'Joint Japan/World Bank Graduate Scholarship Program (JJ/WBGSP)',
-    titleTi: 'ወርልድ ባንክ ስኮላርሺፕ (World Bank & Japan)',
-    provider: 'World Bank & Government of Japan',
-    country: 'Global (USA, Europe, Japan, Africa)',
-    countryTi: 'ዓለምለኸ (ኣሜሪካ፣ ኤውሮጳ፣ ጃፓን)',
-    degreeLevel: 'Master',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full Tuition for 27+ Partner Master Programs', 'Economy Class Air Travel', 'Travel Allowance ($500)', 'Monthly Living Stipend', 'Health Insurance'],
-    coverageTi: ['ሙሉእ ክፍሊት ትምህርቲ ኣብ መሻርኽቲ ዩኒቨርሲቲታት', 'ናይ ነፋሪት ትኬት', 'ናይ ጉዕዞ ኣበል ($500)', 'ናይ ወርሒ መነባበሪ ደሞዝ', 'ናይ ጥዕና መድሕን'],
-    officialUrl: 'https://www.worldbank.org/en/programs/scholarships',
-    deadline: 'Window 1: Jan - Feb / Window 2: March - May',
-    deadlineDate: '2027-02-28',
-    urgency: 'upcoming',
-    urgencyLabel: 'Window 1 Opens Jan',
-    urgencyLabelTi: 'ዙር 1 ኣብ ጥሪ ይኽፈት',
-    description: 'Open to citizens of developing countries with relevant professional experience and a history of supporting their countries’ development efforts.',
-    descriptionTi: 'ኣብ ዓበይቲ ዩኒቨርሲቲታት (Harvard, Columbia, Oxford ወዘተ) ኣብ ናይ ምዕባለ፣ ቁጠባ፣ ህዝባዊ ፖሊሲ ካልኣይ ዲግሪ ንምምሃር ብወርልድ ባንክ ዝወሃብ ዕድል።',
-    eligibility: ['Bachelor’s degree (earned at least 3 years prior)', 'Minimum 3 years of development-related work experience', 'Admitted to a preferred partner university program'],
-    eligibilityTi: ['ቀዳማይ ዲግሪ ካብ ዝተወድአ 3 ዓመት ዝገበረ', 'እንተወሓደ 3 ዓመት ናይ ስራሕ ተመኩሮ', 'ኣብ ተመራጺ መደብ ትምህርቲ ቅቡልነት ዝረኸበ'],
-    tags: ['World Bank', 'Economics', 'Policy', 'Masters', 'Fully Funded'],
-  },
-  {
-    id: 'commonwealth-uk',
-    title: 'Commonwealth Scholarships for Developing Countries',
-    titleTi: 'ኮመንዌልዝ ስኮላርሺፕ (Commonwealth UK)',
-    provider: 'Commonwealth Scholarship Commission (CSC UK)',
-    country: 'United Kingdom',
-    countryTi: 'ዓባይ ብሪጣንያ (United Kingdom)',
-    degreeLevel: 'PhD',
-    fundingType: 'Fully Funded',
-    fundingTypeTi: 'ሙሉእ ብነጻ (Fully Funded)',
-    coverage: ['Full Tuition and Exam Fees', 'Monthly Stipend (£1,347 - £1,652)', 'Approved Airfare', 'Warm Clothing Allowance', 'Study Travel Grant'],
-    coverageTi: ['ምሉእ ክፍሊት ትምህርትን መርመራን', 'ናይ ወርሒ ኣበል (£1,347 - £1,652)', 'ናይ ነፋሪት ወጻኢታት', 'ናይ ክዳውንቲ ኣበል', 'ናይ ምርምር ደገፍ'],
-    officialUrl: 'https://cscuk.fcdo.gov.uk/apply/',
-    deadline: 'September – December Annually',
-    deadlineDate: '2026-10-18',
-    urgency: 'urgent',
-    urgencyLabel: 'Opening Sep / Closes Oct',
-    urgencyLabelTi: 'ቀልጢፍካ መልክት',
-    description: 'Aimed at talented and motivated individuals with the potential to make a positive impact on the global stage through PhD and Master study in the UK.',
-    descriptionTi: 'ኣብ ዓባይ ብሪጣንያ ዶክተርነት (PhD) ወይ ካልኣይ ዲግሪ ንምስራሕ ብኮመንዌልዝ ዝወሃብ ምሉእ ናጻ ስኮላርሺፕ።',
-    eligibility: ['Citizen or permanent resident of a Commonwealth developing country', 'First degree of at least upper second class (2:1)', 'Clear research proposal'],
-    eligibilityTi: ['ጽቡቕ ናይ ቀዳማይ ዲግሪ ውጽኢት', 'ንጹር ናይ ምርምር ፕሮፖዛል (Research Proposal)'],
-    tags: ['UK', 'Commonwealth', 'PhD', 'Masters', 'Research', 'Fully Funded'],
-  },
-];
+import { 
+  Scholarship, 
+  ScholarshipRegion, 
+  DeadlineInfo, 
+  DeadlineUrgency,
+  calculateDeadlineInfo, 
+  INTERNATIONAL_SCHOLARSHIPS_DATA, 
+  SCHOLARSHIP_CHECKLIST_ITEMS, 
+  ChecklistItem 
+} from '../data/scholarshipData';
+import { ScholarshipHourlyTracker } from './ScholarshipHourlyTracker';
 
 interface ScholarshipModalProps {
   isOpen: boolean;
@@ -609,16 +48,26 @@ export const ScholarshipModal: React.FC<ScholarshipModalProps> = ({
 
   // Search and Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState<ScholarshipRegion>('All');
   const [selectedDegree, setSelectedDegree] = useState<string>('All');
   const [selectedFunding, setSelectedFunding] = useState<string>('All');
   const [selectedUrgency, setSelectedUrgency] = useState<string>('All');
   const [sortByDeadline, setSortByDeadline] = useState<boolean>(true);
   const [selectedScholarship, setSelectedScholarship] = useState<Scholarship | null>(null);
 
+  // Real-time hourly tick clock
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // 30s re-eval of deadline diffs
+    return () => clearInterval(timer);
+  }, []);
+
   // Auto-select initial scholarship if provided
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && initialScholarshipId) {
-      const match = SCHOLARSHIPS_DATA.find(
+      const match = INTERNATIONAL_SCHOLARSHIPS_DATA.find(
         (s) => s.id === initialScholarshipId || s.id.includes(initialScholarshipId) || initialScholarshipId.includes(s.id)
       );
       if (match) {
@@ -647,7 +96,6 @@ export const ScholarshipModal: React.FC<ScholarshipModalProps> = ({
     } catch {
       // Fallback
     }
-    // Default initial checked items (academic transcripts & bio passport common)
     return {
       transcripts: true,
       passport: true,
@@ -701,25 +149,28 @@ export const ScholarshipModal: React.FC<ScholarshipModalProps> = ({
   if (!isOpen) return null;
 
   // Counts by urgency status for quick pill filters
-  const urgentCount = SCHOLARSHIPS_DATA.filter(s => s.urgency === 'urgent').length;
-  const approachingCount = SCHOLARSHIPS_DATA.filter(s => s.urgency === 'approaching').length;
-  const upcomingCount = SCHOLARSHIPS_DATA.filter(s => s.urgency === 'upcoming').length;
-  const rollingCount = SCHOLARSHIPS_DATA.filter(s => s.urgency === 'rolling').length;
+  const urgentCount = INTERNATIONAL_SCHOLARSHIPS_DATA.filter(s => s.urgency === 'urgent').length;
+  const approachingCount = INTERNATIONAL_SCHOLARSHIPS_DATA.filter(s => s.urgency === 'approaching').length;
+  const upcomingCount = INTERNATIONAL_SCHOLARSHIPS_DATA.filter(s => s.urgency === 'upcoming').length;
+  const rollingCount = INTERNATIONAL_SCHOLARSHIPS_DATA.filter(s => s.urgency === 'rolling').length;
+  const fullyFundedCount = INTERNATIONAL_SCHOLARSHIPS_DATA.filter(s => s.fundingType === 'Fully Funded').length;
 
   // Filter scholarships
-  let filteredScholarships = SCHOLARSHIPS_DATA.filter((sch) => {
+  let filteredScholarships = INTERNATIONAL_SCHOLARSHIPS_DATA.filter((sch) => {
     const matchesSearch = 
       sch.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sch.titleTi.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sch.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sch.countryTi.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sch.provider.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sch.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
 
+    const matchesRegion = selectedRegion === 'All' || sch.region === selectedRegion;
     const matchesDegree = selectedDegree === 'All' || sch.degreeLevel === selectedDegree || sch.degreeLevel === 'All';
     const matchesFunding = selectedFunding === 'All' || sch.fundingType === selectedFunding;
     const matchesUrgency = selectedUrgency === 'All' || sch.urgency === selectedUrgency;
 
-    return matchesSearch && matchesDegree && matchesFunding && matchesUrgency;
+    return matchesSearch && matchesRegion && matchesDegree && matchesFunding && matchesUrgency;
   });
 
   // Sort by deadline urgency if enabled
@@ -748,19 +199,19 @@ export const ScholarshipModal: React.FC<ScholarshipModalProps> = ({
     setGeneratedEssay('');
 
     try {
-      const prompt = `You are a world-class academic advisor and scholarship mentor. Write a compelling, highly competitive, and authentic Statement of Purpose / Motivation Letter for a scholarship application.
+      const prompt = `You are a world-class academic advisor and international scholarship mentor. Write a compelling, highly competitive, and authentic Statement of Purpose / Motivation Letter for an international scholarship application.
 
 Target Scholarship / University: ${targetProgram}
 Field of Study / Major: ${fieldOfStudy}
-Applicant Academic Background: ${academicBackground || 'Bachelor degree with strong academic record'}
-Future Goals & Community Impact: ${careerGoals || 'Apply knowledge to solve critical challenges and empower community development'}
+Applicant Academic Background: ${academicBackground || 'Bachelor degree with high academic standing'}
+Future Goals & Community Impact: ${careerGoals || 'Apply specialized knowledge to solve critical development and technology challenges in home country and globally'}
 
 Structure the letter professionally:
-1. Formal Salutation & Captivating Introduction
-2. Academic Background & Relevant Achievements
-3. Why this specific Scholarship / University is the ideal match
-4. Long-term Vision & Contribution to Society / Home Country
-5. Strong Closing & Sign-off
+1. Formal Salutation & Captivating Hook / Introduction
+2. Academic Background, Research Experience & Key Milestones
+3. Exact Alignment: Why this specific International Scholarship and Host Country
+4. Concrete Career Vision & Global / Local Development Contribution
+5. Polished Professional Closing & Sign-off
 
 Include both the English master version and a concise Tigrinya summary/translation so the applicant fully understands every nuance.`;
 
@@ -798,7 +249,7 @@ Include both the English master version and a concise Tigrinya summary/translati
       type: 'general',
       content: `📌 ስኮላርሺፕ: ${sch.title} (${sch.titleTi})
 🏢 ኣዳላዊ: ${sch.provider}
-🌍 ሃገር: ${sch.country}
+🌍 ሃገር: ${sch.countryFlag} ${sch.country} (${sch.region})
 🎓 ደረጃ: ${sch.degreeLevel}
 💰 ደገፍ: ${sch.fundingTypeTi}
 🔗 ወግዓዊ መርበብ: ${sch.officialUrl}
@@ -809,19 +260,19 @@ ${sch.descriptionTi}
 
 ዘጠቓልሎም ወጻኢታት:
 ${sch.coverageTi.join('\n- ')}`,
-      tags: ['scholarship', sch.degreeLevel, sch.country],
+      tags: ['scholarship', sch.degreeLevel, sch.country, sch.region],
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#0B0F19] border border-[#C5A059]/40 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh] relative"
+        className="bg-[#0B0F19] border border-[#C5A059]/40 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden text-slate-100 flex flex-col max-h-[92vh] relative"
       >
         
         {/* ========================================================================= */}
-        {/* MODAL HEADER: BRANDING & TABS                                             */}
+        {/* MODAL HEADER: BRANDING & GLOBAL TELEMETRY                                */}
         {/* ========================================================================= */}
         <div className="p-4 sm:p-5 border-b border-slate-800 bg-gradient-to-r from-[#121626] via-[#161B2E] to-[#121626] flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3 min-w-0">
@@ -829,18 +280,19 @@ ${sch.coverageTi.join('\n- ')}`,
               <GraduationCap className="w-6 h-6" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-black text-[#FFF2C2] tracking-tight truncate">
-                  {language === 'ti' ? 'ዕድላት ስኮላርሺፕ (Scholarships & Grants)' : 'Global Scholarships & Grants Hub'}
+                  {language === 'ti' ? 'ዓለምለኻዊ ናይ ስኮላርሺፕ መከታተሊ (International Scholarships)' : 'International Scholarships & Hourly Status Command'}
                 </h3>
-                <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider bg-amber-400/20 text-amber-300 rounded-md border border-amber-400/30 font-mono">
-                  100% Verified
+                <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 rounded-md border border-emerald-500/40">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Hourly Synced</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 truncate">
                 {language === 'ti' 
-                  ? 'ናጻ ናይ ትምህርቲ ዕድላት፣ ወግዓዊ መላግቦታትን ናይ AI ደብዳበ ጸሓፍን' 
-                  : 'Official portals, fully funded opportunities, and AI Statement of Purpose drafter'}
+                  ? 'ናይ ሰሜን ኣሜሪካ፣ ኤውሮጳ፣ ኤስያን ዓለምለኸ ትካላትን ናጻ ትምህርቲ ዕድላት ምስ ሰዓታዊ ኲነታትን AI ደብዳበን' 
+                  : 'Real-time hourly telemetry for North America, Europe, Asia & global fully funded fellowships'}
               </p>
             </div>
           </div>
@@ -855,7 +307,7 @@ ${sch.coverageTi.join('\n- ')}`,
         </div>
 
         {/* ========================================================================= */}
-        {/* SUB NAVIGATION TABS: BROWSE | AI ESSAY DRAFTER | APPLICATION GUIDE        */}
+        {/* SUB NAVIGATION TABS                                                       */}
         {/* ========================================================================= */}
         <div className="px-4 sm:px-6 py-2.5 bg-[#0E1220] border-b border-slate-800/80 flex items-center space-x-2 shrink-0 overflow-x-auto scrollbar-none">
           {/* Tab 1: Browse Scholarships */}
@@ -869,9 +321,9 @@ ${sch.coverageTi.join('\n- ')}`,
             }`}
           >
             <Globe className="w-4 h-4" />
-            <span>{language === 'ti' ? 'ዝርዝር ስኮላርሺፕ (Browse Opportunities)' : 'Browse Opportunities'}</span>
-            <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-black/20 text-current">
-              {SCHOLARSHIPS_DATA.length}
+            <span>{language === 'ti' ? 'ዓለምለኻዊ ዝርዝር (Browse All)' : 'International Portals'}</span>
+            <span className="ml-1 px-1.5 py-0.2 text-[10px] rounded-full bg-black/20 text-current font-mono">
+              {INTERNATIONAL_SCHOLARSHIPS_DATA.length}
             </span>
           </button>
 
@@ -886,7 +338,7 @@ ${sch.coverageTi.join('\n- ')}`,
             }`}
           >
             <Sparkles className="w-4 h-4 text-amber-300" />
-            <span>{language === 'ti' ? 'ብ AI ናይ ስኮላርሺፕ ደብዳበ (AI SOP Drafter)' : 'AI Motivation Essay Drafter'}</span>
+            <span>{language === 'ti' ? 'ብ AI ናይ ስኮላርሺፕ ደብዳበ (AI SOP Drafter)' : 'AI Statement of Purpose Drafter'}</span>
           </button>
 
           {/* Tab 3: Application Guide & Interactive Checklist with Progress Badge */}
@@ -900,7 +352,7 @@ ${sch.coverageTi.join('\n- ')}`,
             }`}
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-            <span>{language === 'ti' ? 'ናይ ምድላው ቼክሊስት (Checklist)' : 'Document Checklist'}</span>
+            <span>{language === 'ti' ? 'ናይ ሰነዳት ቼክሊስት (Checklist)' : 'Document Readiness Checklist'}</span>
             <span className={`ml-1 px-2 py-0.5 text-[10px] font-black rounded-full transition-all ${
               checklistProgressPercent === 100
                 ? 'bg-emerald-400 text-slate-950 animate-pulse'
@@ -919,8 +371,18 @@ ${sch.coverageTi.join('\n- ')}`,
         {activeTab === 'browse' && !selectedScholarship && (
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 scrollbar-thin scrollbar-thumb-slate-800">
             
+            {/* Live Hourly Status Sync Tracker Banner */}
+            <ScholarshipHourlyTracker
+              language={language}
+              totalScholarships={INTERNATIONAL_SCHOLARSHIPS_DATA.length}
+              urgentCount={urgentCount}
+              fullyFundedCount={fullyFundedCount}
+              selectedRegion={selectedRegion}
+              onSelectRegion={(reg) => setSelectedRegion(reg)}
+            />
+
             {/* Search & Filter Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-2">
               
               {/* Search input */}
               <div className="sm:col-span-4 relative">
@@ -929,7 +391,7 @@ ${sch.coverageTi.join('\n- ')}`,
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={language === 'ti' ? 'ብሽም ስኮላርሺፕ፣ ሃገር፣ ዓውዲ ድለ...' : 'Search by scholarship name, country, major...'}
+                  placeholder={language === 'ti' ? 'ብሽም ስኮላርሺፕ፣ ሃገር፣ ዓውዲ ድለ...' : 'Search USA, UK, Germany, Canada, Japan, Major...'}
                   className="w-full pl-9 pr-4 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/30"
                 />
                 {searchQuery && (
@@ -950,7 +412,7 @@ ${sch.coverageTi.join('\n- ')}`,
                   className="w-full py-2.5 px-3 bg-slate-900/90 border border-slate-800 rounded-xl text-slate-200 text-xs sm:text-sm focus:outline-none focus:border-amber-500/60 cursor-pointer font-medium"
                 >
                   <option value="All">{language === 'ti' ? '📅 ኩሉ እዋን (All Deadlines)' : '📅 All Deadline Statuses'}</option>
-                  <option value="urgent">{language === 'ti' ? '🔴 ቀልጢፍካ መልክት (Urgent / Closing)' : '🔴 Urgent: Closing Soon (<45d)'}</option>
+                  <option value="urgent">{language === 'ti' ? '🔴 ቀልጢፍካ መልክት (Urgent / Closing Soon)' : '🔴 Urgent: Closing Soon (<45d)'}</option>
                   <option value="approaching">{language === 'ti' ? '🟡 ክፉት ኣሎ (Open Now)' : '🟡 Open Now (Approaching)'}</option>
                   <option value="upcoming">{language === 'ti' ? '🔵 ቀጻሊ ዙር (Upcoming Cycle)' : '🔵 Upcoming Intake Cycle'}</option>
                   <option value="rolling">{language === 'ti' ? '🟢 ቀጻሊ ምዝገባ (Rolling)' : '🟢 Year-Round / Rolling'}</option>
@@ -998,13 +460,13 @@ ${sch.coverageTi.join('\n- ')}`,
                   }`}
                 >
                   <span>{language === 'ti' ? 'ኩሎም' : 'All'}</span>
-                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-black/30 ml-0.5">{SCHOLARSHIPS_DATA.length}</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-black/30 ml-0.5 font-mono">{INTERNATIONAL_SCHOLARSHIPS_DATA.length}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedUrgency(selectedUrgency === 'urgent' ? 'All' : 'urgent')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
                     selectedUrgency === 'urgent'
                       ? 'bg-rose-500/30 text-rose-200 border border-rose-500/80 shadow-xs'
                       : 'bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border border-rose-500/25'
@@ -1013,13 +475,13 @@ ${sch.coverageTi.join('\n- ')}`,
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
                   <Flame className="w-3.5 h-3.5 text-rose-400" />
                   <span>{language === 'ti' ? 'ቀልጢፍካ መልክት' : 'Urgent / Closing Soon'}</span>
-                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-rose-950/60 border border-rose-500/40 text-rose-200 ml-0.5">{urgentCount}</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-rose-950/60 border border-rose-500/40 text-rose-200 ml-0.5 font-mono">{urgentCount}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedUrgency(selectedUrgency === 'approaching' ? 'All' : 'approaching')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
                     selectedUrgency === 'approaching'
                       ? 'bg-amber-500/30 text-amber-200 border border-amber-500/80 shadow-xs'
                       : 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/25'
@@ -1027,13 +489,13 @@ ${sch.coverageTi.join('\n- ')}`,
                 >
                   <Clock className="w-3.5 h-3.5 text-amber-400" />
                   <span>{language === 'ti' ? 'ክፉት ኣሎ' : 'Open Now'}</span>
-                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-200 ml-0.5">{approachingCount}</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-200 ml-0.5 font-mono">{approachingCount}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedUrgency(selectedUrgency === 'upcoming' ? 'All' : 'upcoming')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
                     selectedUrgency === 'upcoming'
                       ? 'bg-sky-500/30 text-sky-200 border border-sky-500/80 shadow-xs'
                       : 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20 border border-sky-500/25'
@@ -1041,13 +503,13 @@ ${sch.coverageTi.join('\n- ')}`,
                 >
                   <CalendarClock className="w-3.5 h-3.5 text-sky-400" />
                   <span>{language === 'ti' ? 'ቀጻሊ ዙር' : 'Upcoming'}</span>
-                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-sky-950/60 border border-sky-500/40 text-sky-200 ml-0.5">{upcomingCount}</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-sky-950/60 border border-sky-500/40 text-sky-200 ml-0.5 font-mono">{upcomingCount}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedUrgency(selectedUrgency === 'rolling' ? 'All' : 'rolling')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
                     selectedUrgency === 'rolling'
                       ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-500/80 shadow-xs'
                       : 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 border border-emerald-500/25'
@@ -1055,7 +517,7 @@ ${sch.coverageTi.join('\n- ')}`,
                 >
                   <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                   <span>{language === 'ti' ? 'ቀጻሊ ምዝገባ' : 'Rolling'}</span>
-                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 ml-0.5">{rollingCount}</span>
+                  <span className="text-[10px] px-1 py-0.2 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 ml-0.5 font-mono">{rollingCount}</span>
                 </button>
               </div>
 
@@ -1080,13 +542,17 @@ ${sch.coverageTi.join('\n- ')}`,
 
             {/* Results Count Banner */}
             <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span>{language === 'ti' ? `ዝተረኽቡ ዕድላት: ${filteredScholarships.length}` : `Available Programs: ${filteredScholarships.length}`}</span>
+              <span>
+                {language === 'ti' 
+                  ? `ዝተረኽቡ ዓለምለኻውያን ዕድላት: ${filteredScholarships.length}` 
+                  : `Matching International Programs: ${filteredScholarships.length}`}
+              </span>
               <span className="text-amber-400/90 font-medium flex items-center space-x-1">
                 <Flame className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
                 <span>
                   {language === 'ti' 
                     ? 'ቀይሕ ምልክት ዘለዎም ቀልጢፍኩም መልክቱ' 
-                    : 'Red badges indicate closing soon — prepare documents early'}
+                    : 'Real-time hourly countdown active'}
                 </span>
               </span>
             </div>
@@ -1094,7 +560,7 @@ ${sch.coverageTi.join('\n- ')}`,
             {/* Scholarships Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {filteredScholarships.map((sch) => {
-                const deadlineInfo = calculateDeadlineInfo(sch);
+                const deadlineInfo = calculateDeadlineInfo(sch, currentTime);
                 const isUrgent = sch.urgency === 'urgent';
 
                 return (
@@ -1116,7 +582,7 @@ ${sch.coverageTi.join('\n- ')}`,
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           
-                          {/* Tags row + Visual Urgency Countdown Badge */}
+                          {/* Tags row + Flag + Visual Urgency Countdown Badge */}
                           <div className="flex items-center justify-between space-x-1.5 flex-wrap gap-y-1.5 mb-1.5">
                             <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
                               <span className="px-2 py-0.5 text-[10px] font-black rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
@@ -1125,8 +591,12 @@ ${sch.coverageTi.join('\n- ')}`,
                               <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-blue-500/15 text-sky-300 border border-blue-500/30">
                                 {sch.degreeLevel}
                               </span>
-                              <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-slate-800 text-slate-300">
-                                {sch.country}
+                              <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-slate-800 text-slate-200 flex items-center space-x-1">
+                                <span>{sch.countryFlag}</span>
+                                <span>{sch.country}</span>
+                              </span>
+                              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                                {sch.region}
                               </span>
                             </div>
 
@@ -1167,8 +637,19 @@ ${sch.coverageTi.join('\n- ')}`,
                         {language === 'ti' ? sch.descriptionTi : sch.description}
                       </p>
 
+                      {/* Hourly Telemetry Strip */}
+                      <div className="mt-2.5 flex items-center justify-between text-[10px] text-slate-400 bg-slate-950/60 px-2 py-1 rounded-lg border border-slate-800/80">
+                        <span className="flex items-center space-x-1 text-emerald-400 font-medium">
+                          <Radio className="w-2.5 h-2.5 animate-pulse" />
+                          <span>{language === 'ti' ? sch.portalStatusLabelTi : sch.portalStatusLabel}</span>
+                        </span>
+                        <span className="font-mono text-slate-400">
+                          {language === 'ti' ? 'ስዓታዊ ፍተሻ: ድሉው' : 'Hourly Check: Verified'}
+                        </span>
+                      </div>
+
                       {/* Deadline Countdown & Application Timeline Strip */}
-                      <div className={`mt-3 p-2 rounded-xl border flex flex-col space-y-1.5 ${
+                      <div className={`mt-2 p-2 rounded-xl border flex flex-col space-y-1.5 ${
                         isUrgent
                           ? 'bg-rose-950/25 border-rose-500/30'
                           : sch.urgency === 'approaching'
@@ -1178,7 +659,7 @@ ${sch.coverageTi.join('\n- ')}`,
                           : 'bg-slate-900/90 border-slate-800/90'
                       }`}>
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="flex items-center space-x-1 text-slate-300 font-medium">
+                          <span className="flex items-center space-x-1 text-slate-300 font-medium truncate">
                             <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                             <span className="truncate">{sch.deadline}</span>
                           </span>
@@ -1259,11 +740,11 @@ ${sch.coverageTi.join('\n- ')}`,
                   {language === 'ti' ? 'ስኮላርሺፕ ኣይተረኽበን' : 'No scholarships matched your filters'}
                 </h4>
                 <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  {language === 'ti' ? 'በጃኹም ካልእ ቃል ተጠቒምኩም ፈትኑ ወይ ፍልተር ቀይሩ።' : 'Try adjusting your search query or reset your degree filters.'}
+                  {language === 'ti' ? 'በጃኹም ካልእ ቃል ተጠቒምኩም ፈትኑ ወይ ፍልተር ቀይሩ።' : 'Try adjusting your region, search query, or reset your degree filters.'}
                 </p>
                 <button
                   type="button"
-                  onClick={() => { setSearchQuery(''); setSelectedDegree('All'); setSelectedFunding('All'); setSelectedUrgency('All'); }}
+                  onClick={() => { setSearchQuery(''); setSelectedRegion('All'); setSelectedDegree('All'); setSelectedFunding('All'); setSelectedUrgency('All'); }}
                   className="mt-4 py-2 px-4 rounded-xl bg-[#C5A059] text-slate-950 text-xs font-bold cursor-pointer"
                 >
                   {language === 'ti' ? 'ፍልተራት ጽረግ (Reset)' : 'Reset Filters'}
@@ -1278,7 +759,7 @@ ${sch.coverageTi.join('\n- ')}`,
         {/* DETAIL VIEW FOR A SINGLE SCHOLARSHIP                                      */}
         {/* ========================================================================= */}
         {activeTab === 'browse' && selectedScholarship && (() => {
-          const detailDeadlineInfo = calculateDeadlineInfo(selectedScholarship);
+          const detailDeadlineInfo = calculateDeadlineInfo(selectedScholarship, currentTime);
           const isUrgent = selectedScholarship.urgency === 'urgent';
 
           return (
@@ -1291,7 +772,7 @@ ${sch.coverageTi.join('\n- ')}`,
                 className="py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center space-x-1.5 border border-slate-800 cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4 rotate-180" />
-                <span>{language === 'ti' ? 'ናብ ዝርዝር ስኮላርሺፕ ተመለስ' : 'Back to Scholarships List'}</span>
+                <span>{language === 'ti' ? 'ናብ ዝርዝር ስኮላርሺፕ ተመለስ' : 'Back to International Scholarships'}</span>
               </button>
 
               {/* Title & Metadata Header */}
@@ -1303,8 +784,12 @@ ${sch.coverageTi.join('\n- ')}`,
                   <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-blue-500/20 text-sky-300 border border-blue-500/40">
                     {selectedScholarship.degreeLevel} Degree
                   </span>
-                  <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 text-slate-300">
-                    🌍 {selectedScholarship.country}
+                  <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 flex items-center space-x-1">
+                    <span>{selectedScholarship.countryFlag}</span>
+                    <span>{selectedScholarship.country}</span>
+                  </span>
+                  <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    🌍 {selectedScholarship.region}
                   </span>
                   <div className={`px-2.5 py-1 rounded-lg text-xs font-black border flex items-center space-x-1.5 ${detailDeadlineInfo.badgeClass}`}>
                     {isUrgent && <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping inline-block" />}
@@ -1356,7 +841,7 @@ ${sch.coverageTi.join('\n- ')}`,
                 </div>
               </div>
 
-              {/* Deadline & Time Management Countdown Alert Card */}
+              {/* Deadline & Hourly Telemetry Live Countdown Alert Card */}
               <div className={`rounded-2xl border p-4 sm:p-5 relative overflow-hidden ${
                 isUrgent
                   ? 'bg-gradient-to-br from-rose-950/40 via-[#161224] to-[#121626] border-rose-500/50 shadow-md shadow-rose-950/30'
@@ -1381,22 +866,22 @@ ${sch.coverageTi.join('\n- ')}`,
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-                        <span>{language === 'ti' ? 'ናይ ምዕጻው ዕለት ቆጸራ (Deadline Countdown)' : 'Application Timeline & Countdown'}</span>
+                        <span>{language === 'ti' ? 'ናይ ምዕጻው ዕለት ቆጸራ (Hourly Status & Countdown)' : 'Real-time Hourly Deadline Countdown'}</span>
                       </h4>
                       <p className="text-xs text-slate-300 mt-0.5">
                         {isUrgent 
-                          ? (language === 'ti' ? '⚡ እዚ ስኮላርሺፕ ኣብ ቀረባ እዋን ይዕጾ ኣሎ! ናይ ቋንቋን ደብዳበን ሰነዳትኩም ኣዳልዉ።' : '⚡ High Priority: This deadline is fast approaching. Finalize your recommendation letters and SOP promptly.')
-                          : (language === 'ti' ? '📌 መመልከቲ ወግዓዊ መርበብን ቀጻሊ ዙርን ተኸታተሉ።' : '📌 Current status and submission timeline for this funding cycle.')}
+                          ? (language === 'ti' ? '⚡ እዚ ስኮላርሺፕ ኣብ ቀረባ እዋን ይዕጾ ኣሎ! ናይ ቋንቋን ደብዳበን ሰነዳትኩም ኣዳልዉ።' : '⚡ High Urgency: This deadline is approaching fast. Submit before midnight host university timezone.')
+                          : (language === 'ti' ? '📌 መመልከቲ ወግዓዊ መርበብን ቀጻሊ ዙርን ተኸታተሉ።' : '📌 Verified portal ingestion active with hourly check cycles.')}
                       </p>
                     </div>
                   </div>
 
                   {/* Countdown Ticker Box */}
                   <div className={`px-3 py-1.5 rounded-xl border text-right shrink-0 ${detailDeadlineInfo.badgeClass}`}>
-                    <span className="text-[10px] uppercase font-bold tracking-wider block opacity-80">
-                      {language === 'ti' ? 'ዝተረፈ ግዜ' : 'Time Remaining'}
+                    <span className="text-[10px] uppercase font-bold tracking-wider block opacity-80 font-mono">
+                      {language === 'ti' ? 'ዝተረፈ ግዜ' : 'Time Left'}
                     </span>
-                    <span className="text-xs sm:text-sm font-black">
+                    <span className="text-xs sm:text-sm font-black font-mono">
                       {language === 'ti' ? detailDeadlineInfo.formattedCountdownTi : detailDeadlineInfo.formattedCountdown}
                     </span>
                   </div>
@@ -1541,7 +1026,7 @@ ${sch.coverageTi.join('\n- ')}`,
               <p className="text-xs text-slate-400 mt-1">
                 {language === 'ti' 
                   ? 'ዝርዝር ሓበሬታኹም ኣእትዉ እሞ ንስኮላርሺፕ ዘእምን ብሉጽ ናይ እንግሊዝኛ ደብዳበ (Statement of Purpose / Motivation Letter) ብ AI የዳልወልኩም።'
-                  : 'Enter your target scholarship, study field, and background to generate a competitive, structured motivation letter.'}
+                  : 'Enter your target international scholarship, study field, and background to generate a competitive, structured motivation letter.'}
               </p>
             </div>
 
@@ -1555,7 +1040,7 @@ ${sch.coverageTi.join('\n- ')}`,
                   type="text"
                   value={targetProgram}
                   onChange={(e) => setTargetProgram(e.target.value)}
-                  placeholder="e.g., Fulbright Scholarship, DAAD Germany, Chevening UK, Erasmus Mundus..."
+                  placeholder="e.g., Fulbright USA, Chevening UK, DAAD Germany, Knight-Hennessy Stanford, Erasmus Mundus, KAUST..."
                   className="w-full py-2.5 px-3.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -1569,7 +1054,7 @@ ${sch.coverageTi.join('\n- ')}`,
                     type="text"
                     value={fieldOfStudy}
                     onChange={(e) => setFieldOfStudy(e.target.value)}
-                    placeholder="e.g., Computer Science & AI, Public Health, Civil Engineering, MBA..."
+                    placeholder="e.g., Computer Science & AI, Public Health, Civil Engineering, Economics, MBA..."
                     className="w-full py-2.5 px-3.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-blue-500"
                   />
                 </div>
@@ -1582,7 +1067,7 @@ ${sch.coverageTi.join('\n- ')}`,
                     type="text"
                     value={academicBackground}
                     onChange={(e) => setAcademicBackground(e.target.value)}
-                    placeholder="e.g., BSc in Engineering, 3.8 GPA, 2 years research experience..."
+                    placeholder="e.g., BSc in Computer Engineering, 3.85 GPA, 2 published research papers..."
                     className="w-full py-2.5 px-3.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-blue-500"
                   />
                 </div>
@@ -1596,7 +1081,7 @@ ${sch.coverageTi.join('\n- ')}`,
                   rows={3}
                   value={careerGoals}
                   onChange={(e) => setCareerGoals(e.target.value)}
-                  placeholder="e.g., Intend to develop renewable energy solutions for rural communities, return to teach at university..."
+                  placeholder="e.g., Intend to build AI educational tools for rural schools, return to teach university courses, and collaborate on global research..."
                   className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-100 text-xs sm:text-sm focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -1697,12 +1182,12 @@ ${sch.coverageTi.join('\n- ')}`,
                   </div>
 
                   <h3 className="text-base sm:text-xl font-black text-white tracking-tight flex items-center space-x-2">
-                    <span>{language === 'ti' ? 'ናይ ስኮላርሺፕ ሰነዳት ምድላው መከታተሊ' : 'Scholarship Application Readiness Tracker'}</span>
+                    <span>{language === 'ti' ? 'ናይ ስኮላርሺፕ ሰነዳት ምድላው መከታተሊ' : 'International Scholarship Readiness Tracker'}</span>
                   </h3>
                   <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
                     {language === 'ti'
                       ? 'ዘድልዩ ሰነዳት ምስ ኣዳለኹም ነጥብታት ብምምራጽ ዕዉት ምድላውኩምን ዘለኩም ድልውነትን ብቐጥታ ተኸታተሉ።'
-                      : 'Check off required and recommended documents to track your preparation progress in real time.'}
+                      : 'Check off required and recommended documents to track your international scholarship preparation in real time.'}
                   </p>
                 </div>
 
@@ -1918,7 +1403,7 @@ ${sch.coverageTi.join('\n- ')}`,
         <div className="p-3 sm:p-4 bg-[#0A0D17] border-t border-slate-800 flex items-center justify-between shrink-0 text-xs text-slate-400">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{language === 'ti' ? 'ኩሎም መላግቦታት ወግዓዊን ውሑስን እዮም' : 'All links route directly to official portals'}</span>
+            <span>{language === 'ti' ? 'ኩሎም መላግቦታት ወግዓዊን ውሑስን እዮም' : 'All links route directly to official international portals'}</span>
           </div>
 
           <button

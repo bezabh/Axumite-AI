@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Copy, Check, Crown, Shield, Cpu, ChevronRight, X } from 'lucide-react';
+import { Axumite3DLogo } from './Axumite3DLogo';
 
 interface BrandHeroModalProps {
   logoSrc: string;
@@ -9,19 +10,11 @@ interface BrandHeroModalProps {
 export const BrandHeroModal: React.FC<BrandHeroModalProps> = ({ logoSrc, onClose }) => {
   const [copied, setCopied] = useState(false);
 
-  const exactUserPrompt = `Design a luxury, minimalist, globally recognizable logo for an AI application named AXUMITE AI. The logo should combine ancient Axumite heritage with cutting-edge artificial intelligence in a timeless, iconic design.
+  const exactUserPrompt = `Design a luxury, minimalist, globally recognizable logo for an AI application named AXUMITE AI (ኣክሱማይት AI). The logo combines ancient Axumite heritage with cutting-edge artificial intelligence in a timeless, iconic design.
 
-The main symbol should be inspired by the Axum Obelisk (Stela of Axum), redesigned into a modern geometric emblem with subtle AI circuit patterns engraved into the stone. The symbol must look premium, elegant, and instantly recognizable as an app icon.
+The main symbol features bold 3D extruded lettering for "ኣክሱማይት AI" with an iridescent chromatic gradient (electric indigo, royal violet, magenta pink, sunset coral, and amber gold) terminating in solid polished 24K yellow gold for "AI".
 
-Use a black matte background with metallic gold materials, soft reflections, realistic 3D bevels, cinematic lighting, and subtle glowing highlights. The design should feel as luxurious as brands like Apple, Rolex, or Lamborghini while remaining clean and minimal.
-
-Place the emblem inside a thin circular gold ring with balanced proportions. Avoid unnecessary decorations, clutter, or busy backgrounds.
-
-Below the emblem, display the brand name:
-
-AXUMITE AI
-
-in a custom luxury serif or geometric font with metallic gold lettering.`;
+Centered below the lettering sits a minimalist circular gold ring medallion framing the monolithic Great Obelisk of Axum with stone steps. The dark obsidian floor below casts soft glossy studio reflections.`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(exactUserPrompt);
@@ -36,7 +29,7 @@ in a custom luxury serif or geometric font with metallic gold lettering.`;
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-[#18161D] text-slate-400 hover:text-amber-300 border border-[#2D2820] transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full bg-[#18161D] text-slate-400 hover:text-amber-300 border border-[#2D2820] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -44,24 +37,13 @@ in a custom luxury serif or geometric font with metallic gold lettering.`;
         {/* Hero Emblem Showcase */}
         <div className="flex flex-col items-center text-center space-y-4 pt-2">
           
-          <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-full p-1 bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 shadow-2xl glow-gold-lg">
-            <img
-              src={logoSrc}
-              alt="AXUMITE AI Emblem"
-              className="w-full h-full rounded-full object-cover bg-black"
-              referrerPolicy="no-referrer"
+          <div className="w-full py-4 flex flex-col items-center justify-center bg-gradient-to-b from-[#14101A] to-[#0A090E] rounded-2xl border border-amber-500/30 p-4">
+            <Axumite3DLogo 
+              size="md" 
+              showObeliskMedallion={true} 
+              showReflection={true} 
+              showSubtitle={true} 
             />
-          </div>
-
-          <div>
-            <div className="flex items-center justify-center space-x-2">
-              <h2 className="font-cinzel text-2xl sm:text-3xl font-extrabold tracking-widest text-gold-gradient">
-                AXUMITE AI
-              </h2>
-            </div>
-            <p className="text-xs text-amber-300 font-medium tracking-widest uppercase mt-1">
-              THE HERITAGE OF AKSUM × FUTURE ARTIFICIAL INTELLIGENCE
-            </p>
           </div>
 
         </div>
@@ -71,20 +53,20 @@ in a custom luxury serif or geometric font with metallic gold lettering.`;
           <div className="bg-[#141217] p-3.5 rounded-2xl border border-[#2A241C] space-y-1">
             <div className="flex items-center space-x-1.5 text-amber-400 font-bold text-xs">
               <Crown className="w-4 h-4" />
-              <span>LUXURY AESTHETIC</span>
+              <span>3D CHROMATIC LUXURY</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Black matte backdrop, metallic gold bevels, and cinematic lighting inspired by luxury watchmakers and haute design.
+              Vibrant violet-to-amber 3D extruded lettering paired with polished 24K solid gold beveled AI typography.
             </p>
           </div>
 
           <div className="bg-[#141217] p-3.5 rounded-2xl border border-[#2A241C] space-y-1">
             <div className="flex items-center space-x-1.5 text-amber-400 font-bold text-xs">
               <Shield className="w-4 h-4" />
-              <span>STELA GEOMETRY</span>
+              <span>GREAT OBELISK CREST</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Monolithic architectural symmetry of the Great Obelisk of Axum, integrated with etched AI circuitry.
+              Monolithic architectural symmetry of the Great Obelisk of Axum framed within a golden medallion ring.
             </p>
           </div>
 
@@ -109,7 +91,7 @@ in a custom luxury serif or geometric font with metallic gold lettering.`;
 
             <button
               onClick={handleCopy}
-              className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all"
+              className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-all cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copied Prompt' : 'Copy Master Prompt'}</span>

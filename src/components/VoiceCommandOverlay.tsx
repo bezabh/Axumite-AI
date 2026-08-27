@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { useLanguage } from '../context/LanguageContext';
+import { Language } from '../utils/translations';
 import { playVoiceTriggerChime, playCommandSuccessChime, playVoiceDeactivateChime } from '../utils/audioChime';
 
 export interface VoiceActionDefinition {
@@ -37,7 +38,7 @@ export interface VoiceExecutionContext {
   openMechanic: () => void;
   openVideoTranslator: () => void;
   openDrawer: () => void;
-  setLanguage: (lang: 'ti' | 'en') => void;
+  setLanguage: (lang: Language) => void;
   sendChatMessage?: (msg: string) => void;
   closeOverlay: () => void;
 }
@@ -58,7 +59,7 @@ interface VoiceCommandOverlayProps {
   onOpenVideoTranslator: () => void;
   onOpenDrawer: () => void;
   onOpenWelcome?: () => void;
-  onSetLanguage?: (lang: 'ti' | 'en') => void;
+  onSetLanguage?: (lang: Language) => void;
   onSendChatMessage?: (msg: string) => void;
   isAlwaysListening?: boolean;
   onToggleAlwaysListening?: () => void;
@@ -87,6 +88,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
 }) => {
   const { language, setLanguage } = useLanguage();
   const effectiveSetLanguage = onSetLanguage || setLanguage;
+  const isTigrinya = language === 'ti' || language === 'ti_tg';
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -399,11 +401,11 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
     {
       id: 'switch-lang-ti',
       category: 'system',
-      titleEn: 'Switch Language to Tigrinya',
+      titleEn: 'Switch to Tigrinya',
       titleTi: 'ቋንቋ ናብ ትግርኛ ቀይር',
-      samplePhrasesEn: ['Switch to Tigrinya', 'Change language to Tigrinya', 'Tigrinya mode'],
-      samplePhrasesTi: ['ቋንቋ ናብ ትግርኛ ቀይር', 'ብትግርኛ ግበሮ', 'ናብ ትግርኛ'],
-      keywords: ['switch to tigrinya', 'change to tigrinya', 'language tigrinya', 'ናብ ትግርኛ', 'ብትግርኛ ግበሮ'],
+      samplePhrasesEn: ['Switch to Tigrinya', 'Tigrinya language', 'Tigrinya mode'],
+      samplePhrasesTi: ['ቋንቋ ናብ ትግርኛ ቀይር', 'ትግርኛ ግበር', 'ብትግርኛ ተዛረብ'],
+      keywords: ['switch to tigrinya', 'tigrinya', 'language tigrinya', 'ናብ ትግርኛ', 'ትግርኛ'],
       icon: Globe,
       execute: (ctx) => {
         ctx.setLanguage('ti');
@@ -428,28 +430,48 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
       confirmationEn: 'App language switched to English!',
       confirmationTi: 'ቋንቋ መተግበሪ ናብ እንግሊዝኛ ተቐይሩ ኣሎ!',
     },
+    {
+      id: 'switch-lang-de',
+      category: 'system',
+      titleEn: 'Switch Language to German',
+      titleTi: 'ቋንቋ ናብ ጀርመንኛ ቀይር',
+      samplePhrasesEn: ['Switch to German', 'Change language to German', 'German mode'],
+      samplePhrasesTi: ['ቋንቋ ናብ ጀርመን ቀይር', 'ብጀርመንኛ ግበሮ', 'ናብ ጀርመን'],
+      keywords: ['switch to german', 'german mode', 'deutsch', 'ጀርመንኛ'],
+      icon: Globe,
+      execute: (ctx) => {
+        ctx.setLanguage('de');
+        ctx.closeOverlay();
+      },
+      confirmationEn: 'App language switched to German!',
+      confirmationTi: 'ቋንቋ መተግበሪ ናብ ጀርመንኛ ተቐይሩ ኣሎ!',
+    },
   ], []);
 
-  // Text-to-speech audio feedback in Tigrinya
+  // Text-to-speech audio feedback localized in Tigrinya
   const speakFeedback = (text: string) => {
     if (!speechEnabled || !window.speechSynthesis) return;
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ti-ER';
+      utterance.lang = language === 'ti_tg' ? 'ti-ET' : isTigrinya ? 'ti-ER' : language === 'de' ? 'de-DE' : 'en-US';
       utterance.rate = 0.95;
       utterance.pitch = 1.05;
 
       const voices = window.speechSynthesis.getVoices();
-      const hornVoice = voices.find(
-        (v) =>
-          v.lang.startsWith('ti') ||
-          v.lang.startsWith('am') ||
-          v.name.toLowerCase().includes('tigrinya') ||
-          v.name.toLowerCase().includes('amharic')
-      );
-      if (hornVoice) {
-        utterance.voice = hornVoice;
+      if (isTigrinya) {
+        const hornVoice = voices.find(
+          (v) =>
+            v.lang.startsWith('ti') ||
+            v.lang.startsWith('am') ||
+            v.name.toLowerCase().includes('tigrinya') ||
+            v.name.toLowerCase().includes('amharic') ||
+            v.name.toLowerCase().includes('ethiopia') ||
+            v.name.toLowerCase().includes('eritrea')
+        );
+        if (hornVoice) {
+          utterance.voice = hornVoice;
+        }
       }
 
       window.speechSynthesis.speak(utterance);
@@ -509,7 +531,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
     // Play crisp golden success confirmation chime
     playCommandSuccessChime();
 
-    const confirmText = language === 'ti' ? actionToRun.confirmationTi : actionToRun.confirmationEn;
+    const confirmText = isTigrinya ? actionToRun.confirmationTi : actionToRun.confirmationEn;
     setStatusMessage(confirmText);
     speakFeedback(confirmText);
 
@@ -541,7 +563,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
 
     if (matched) {
       setMatchedAction(matched);
-      setStatusMessage(language === 'ti' ? `ተለልዩ፡ "${matched.titleTi}"` : `Detected Action: "${matched.titleEn}"`);
+      setStatusMessage(isTigrinya ? `ተለልዩ፡ "${matched.titleTi}"` : `Detected Action: "${matched.titleEn}"`);
 
       // Start 1.2s auto-execute countdown
       setExecutionCountdown(1);
@@ -555,7 +577,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
       setExecutionCountdown(null);
       if (text.length > 2) {
         setStatusMessage(
-          language === 'ti' 
+          isTigrinya 
             ? 'ትእዛዝ ኣይተረኽበን። በጃኹም ካብቶም ኣብ ታሕቲ ዘለዉ ምረጹ ወይ ደጊምኩም ተዛረቡ።'
             : 'Unrecognized command. Try saying "Open Settings", "Show History", or pick below.'
         );
@@ -615,7 +637,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
     setTranscript('');
     setInterimTranscript('');
     setMatchedAction(null);
-    setStatusMessage(language === 'ti' ? 'ይሰምዕ ኣሎ... ተዛረቡ' : 'Listening... Speak your command');
+    setStatusMessage(isTigrinya ? 'ይሰምዕ ኣሎ... ተዛረቡ' : 'Listening... Speak your command');
 
     // Play subtle voice trigger chime
     playVoiceTriggerChime();
@@ -624,7 +646,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
 
     if (!SpeechRecognition) {
       setMicPermissionError(
-        language === 'ti'
+        isTigrinya
           ? 'እዚ ብራውዘር Speech Recognition ኣይድግፍን። ኣብ ታሕቲ ዘለዉ ናይ 1-ጠውቂ ትእዛዛት ተጠቐሙ።'
           : 'Speech Recognition not supported in this browser. Please type or tap any command below.'
       );
@@ -636,7 +658,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = language === 'ti' ? 'en-US' : 'en-US'; // English handles phonetics and Latin Tigrinya commands seamlessly
+      recognition.lang = isTigrinya ? 'en-US' : 'en-US'; // English handles phonetics and Latin Tigrinya commands seamlessly
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -665,12 +687,11 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('Speech Recognition error:', event.error);
-        if (event.error === 'not-allowed') {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
           setMicPermissionError(
-            language === 'ti'
-              ? 'ፍቓድ ማይክሮፎን ተኸልኪሉ ኣሎ። ኣብ ብራውዘርኩም ማይክሮፎን ፍቐዱ።'
-              : 'Microphone permission denied. Please allow microphone access in your browser.'
+            isTigrinya
+              ? 'ፍቓድ ማይክሮፎን ተኸልኪሉ ኣሎ። ኣብ ብራውዘርኩም ማይክሮፎን ፍቐዱ ወይ ኣብ ታሕቲ ዘለዉ ትእዛዛት ተጠቐሙ።'
+              : 'Microphone permission restricted. Please allow microphone access in your browser or select commands below.'
           );
         }
         setIsListening(false);
@@ -684,9 +705,14 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
 
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (err: any) {
-      console.error('Failed to start speech recognition:', err);
+    } catch {
+      setMicPermissionError(
+        isTigrinya
+          ? 'ማይክሮፎን ክጅምር ኣይከኣለን። ኣብ ታሕቲ ብምጽሓፍ ወይ ብምጥዋቕ ተጠቐሙ።'
+          : 'Could not access microphone. Please type your command or tap any option below.'
+      );
       setIsListening(false);
+      stopAudioVisualizer();
     }
   };
 
@@ -754,7 +780,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-base sm:text-lg font-black font-cinzel text-white tracking-wide">
-                  {language === 'ti' ? 'ናይ ድምጺ ትእዛዛት (Voice Command HUD)' : 'Sovereign Voice Command Overlay'}
+                  {isTigrinya ? 'ናይ ድምጺ ትእዛዛት (Voice Command HUD)' : 'Sovereign Voice Command Overlay'}
                 </h2>
                 <span className="text-[10px] uppercase font-mono font-bold tracking-widest bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 flex items-center space-x-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -762,7 +788,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                {language === 'ti' ? 'ብድምጽኹም "Open Settings" ወይ "Show History" ኢልኩም ተዛረቡ' : 'Navigate anywhere or trigger actions with natural language voice commands.'}
+                {isTigrinya ? 'ብድምጽኹም "Open Settings" ወይ "Show History" ኢልኩም ተዛረቡ' : 'Navigate anywhere or trigger actions with natural language voice commands.'}
               </p>
             </div>
           </div>
@@ -780,16 +806,16 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                 }`}
                 title={
                   isAlwaysListening
-                    ? (language === 'ti' ? 'Hands-Free ሁነታ ንቑሕ ኣሎ (ጠውቕ ንምቁራጽ)' : 'Always-Listening Hands-Free Mode Active (Click to disable)')
-                    : (language === 'ti' ? 'Hands-Free ኩሉ ግዜ ሰማዒ ንምብራህ ጠውቕ' : 'Enable Always-Listening Hands-Free Voice Mode')
+                    ? (isTigrinya ? 'Hands-Free ሁነታ ንቑሕ ኣሎ (ጠውቕ ንምቁራጽ)' : 'Always-Listening Hands-Free Mode Active (Click to disable)')
+                    : (isTigrinya ? 'Hands-Free ኩሉ ግዜ ሰማዒ ንምብራህ ጠውቕ' : 'Enable Always-Listening Hands-Free Voice Mode')
                 }
               >
                 <span className={`w-2 h-2 rounded-full ${isAlwaysListening ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`} />
                 <Radio className={`w-3.5 h-3.5 ${isAlwaysListening ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
                 <span className="hidden xs:inline text-[11px]">
                   {isAlwaysListening
-                    ? (language === 'ti' ? 'Hands-Free: ንቑሕ' : 'Always-On: LIVE')
-                    : (language === 'ti' ? 'Hands-Free' : 'Always-On')}
+                    ? (isTigrinya ? 'Hands-Free: ንቑሕ' : 'Always-On: LIVE')
+                    : (isTigrinya ? 'Hands-Free' : 'Always-On')}
                 </span>
               </button>
             )}
@@ -879,7 +905,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                 ) : (
                   <p className="text-xs sm:text-sm text-slate-400 flex items-center space-x-2">
                     <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>{statusMessage || (language === 'ti' ? 'ተዛረቡ፡ ንኣብነት "Open Settings" ወይ "Show History"' : 'Say a command like "Open Settings" or "Show History"...')}</span>
+                    <span>{statusMessage || (isTigrinya ? 'ተዛረቡ፡ ንኣብነት "Open Settings" ወይ "Show History"' : 'Say a command like "Open Settings" or "Show History"...')}</span>
                   </p>
                 )}
               </div>
@@ -905,7 +931,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                       MATCHED COMMAND
                     </span>
                     <h4 className="font-bold text-white text-sm">
-                      {language === 'ti' ? matchedAction.titleTi : matchedAction.titleEn}
+                      {isTigrinya ? matchedAction.titleTi : matchedAction.titleEn}
                     </h4>
                   </div>
                 </div>
@@ -941,7 +967,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                   type="text"
                   value={customInputText}
                   onChange={(e) => setCustomInputText(e.target.value)}
-                  placeholder={language === 'ti' ? 'ወይ ብጽሑፍ ትእዛዝ ኣእትዉ (ንኣብነት፡ Open Settings, Show History...)' : 'Or type a command (e.g., Open Settings, Show History, Translate...)'}
+                  placeholder={isTigrinya ? 'ወይ ብጽሑፍ ትእዛዝ ኣእትዉ (ንኣብነት፡ Open Settings, Show History...)' : 'Or type a command (e.g., Open Settings, Show History, Translate...)'}
                   className="w-full bg-[#181728] border border-slate-700/80 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-amber-400 transition-colors"
                 />
               </div>
@@ -964,7 +990,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
               <div>
                 <h3 className="font-bold text-white text-sm flex items-center space-x-1.5">
                   <Zap className="w-4 h-4 text-amber-400" />
-                  <span>{language === 'ti' ? 'ዝተዳለዉ ናይ 1-ጠውቂ ትእዛዛት (Quick Command Suggestions)' : 'Quick Voice Command Suggestions'}</span>
+                  <span>{isTigrinya ? 'ዝተዳለዉ ናይ 1-ጠውቂ ትእዛዛት (Quick Command Suggestions)' : 'Quick Voice Command Suggestions'}</span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
                   Tap any command chip below to execute immediately or speak aloud.
@@ -993,7 +1019,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {filteredSuggestions.map((action) => {
                 const IconComponent = action.icon;
-                const samplePh = language === 'ti' ? action.samplePhrasesTi[0] : action.samplePhrasesEn[0];
+                const samplePh = isTigrinya ? action.samplePhrasesTi[0] : action.samplePhrasesEn[0];
 
                 return (
                   <button
@@ -1013,7 +1039,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
                           &quot;{samplePh}&quot;
                         </p>
                         <p className="text-[10px] text-slate-400 truncate">
-                          {language === 'ti' ? action.titleTi : action.titleEn}
+                          {isTigrinya ? action.titleTi : action.titleEn}
                         </p>
                       </div>
                     </div>
@@ -1041,7 +1067,7 @@ export const VoiceCommandOverlay: React.FC<VoiceCommandOverlayProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition-colors cursor-pointer"
           >
-            {language === 'ti' ? 'ዕጸው (Close HUD)' : 'Close'}
+            {isTigrinya ? 'ዕጸው (Close HUD)' : 'Close'}
           </button>
         </div>
 

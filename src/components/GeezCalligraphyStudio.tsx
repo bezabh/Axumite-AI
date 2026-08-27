@@ -42,7 +42,7 @@ const PRESET_WORDS = [
   { ti: 'ጥበብ', en: 'Wisdom (Tibeb)', subtitle: 'ጥበብ ናይ ኣቦታትና' },
   { ti: 'ብርሃን', en: 'Light (Birhan)', subtitle: 'ብርሃን ሓቂ' },
   { ti: 'ኣክሱም', en: 'Axum (Aksum)', subtitle: 'ታሪኻዊ ስልጣነ' },
-  { ti: 'ኤርትራ', en: 'Eritrea (Ertra)', subtitle: 'ሃገር ጽንዓትን ሓርነትን' },
+  { ti: 'ትግራይ', en: 'Tigray (Tigray)', subtitle: 'መበቆል ጥንታዊ ስልጣነን ጽንዓትን' },
   { ti: 'ሓርነት', en: 'Freedom (Harnet)', subtitle: 'ክብሪ ሓርነት' },
   { ti: 'በረኸት', en: 'Blessing (Bereket)', subtitle: 'በረኸት ኣብ ገዛኹም' },
   { ti: 'ልዑላዊ', en: 'Sovereignty (Lulawi)', subtitle: 'ልዑላዊ መንነት' },

@@ -9,9 +9,10 @@ import {
 import { 
   Settings, Sliders, ShieldCheck, Cpu, Database, Palette, 
   Lock, Save, RotateCcw, Download, CheckCircle2, AlertTriangle, 
-  Volume2, Sparkles, Server, Globe, Key, Bell, RefreshCw, Eye
+  Volume2, Sparkles, Server, Globe, Key, Bell, RefreshCw, Eye, EyeOff
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { AdminConfigLivePreview } from './AdminConfigLivePreview';
 
 interface AdminConfigViewProps {
   currentUser: UserProfile;
@@ -24,6 +25,8 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
 }) => {
   const { language } = useLanguage();
   const [config, setConfig] = useState<AppSystemConfig>(getStoredAppConfig());
+  const [savedConfig, setSavedConfig] = useState<AppSystemConfig>(getStoredAppConfig());
+  const [showLivePreview, setShowLivePreview] = useState(true);
   const [activeTab, setActiveTab] = useState<'general' | 'ai' | 'security' | 'tokens' | 'ui' | 'features'>('general');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +42,7 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
     setIsSaving(true);
     setTimeout(() => {
       saveStoredAppConfig(config);
+      setSavedConfig(config);
       if (onConfigChange) onConfigChange(config);
       setIsSaving(false);
       triggerNotification(
@@ -57,6 +61,7 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
     )) {
       setConfig(DEFAULT_APP_CONFIG);
       saveStoredAppConfig(DEFAULT_APP_CONFIG);
+      setSavedConfig(DEFAULT_APP_CONFIG);
       if (onConfigChange) onConfigChange(DEFAULT_APP_CONFIG);
       triggerNotification(
         language === 'ti' 
@@ -135,6 +140,19 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
+              onClick={() => setShowLivePreview(!showLivePreview)}
+              className={`px-3 py-2 border rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-md ${
+                showLivePreview 
+                  ? 'bg-amber-500/20 border-amber-400/60 text-[#F3E5AB]' 
+                  : 'bg-[#1A162B] border-[#8E6D28]/40 text-slate-400 hover:text-white'
+              }`}
+              title={showLivePreview ? "Hide Live UI Preview" : "Show Live UI Preview"}
+            >
+              {showLivePreview ? <Eye className="w-3.5 h-3.5 text-amber-300" /> : <EyeOff className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{showLivePreview ? (language === 'ti' ? 'ቅድመ-ተረኽቦ' : 'Live Preview: ON') : (language === 'ti' ? 'ቅድመ-ተረኽቦ ኣርኢ' : 'Show Preview')}</span>
+            </button>
+
+            <button
               onClick={handleExportJSON}
               className="px-3 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-[#8E6D28]/40 text-[#F3E5AB] text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-md"
               title="Export Config as JSON"
@@ -161,6 +179,17 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Real-time Interactive Live Preview Window for Branding & UI */}
+      {showLivePreview && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          <AdminConfigLivePreview
+            config={config}
+            savedConfig={savedConfig}
+            onThemeSelect={(th) => setConfig({ ...config, ui: { ...config.ui, primaryTheme: th } })}
+          />
+        </div>
+      )}
 
       {/* Sub-Navigation Tabs */}
       <div className="bg-[#090812] border border-[#8E6D28]/30 rounded-2xl p-1.5 flex flex-wrap items-center gap-1 shadow-md">
@@ -275,10 +304,10 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
                   onChange={(e) => setConfig({ ...config, defaultLanguage: e.target.value as any })}
                   className="w-full bg-[#141220] border border-slate-700 focus:border-[#C5A059] rounded-xl px-3 py-2 text-slate-100 font-medium outline-none"
                 >
-                  <option value="ti-ER">ትግርኛ (Eritrean Tigrinya)</option>
-                  <option value="ti-ET">ትግርኛ (Ethiopian Tigrinya)</option>
+                  <option value="ti">ትግርኛ (Tigrinya)</option>
                   <option value="gez">ግዕዝ (Ge'ez Script)</option>
                   <option value="en">English (International)</option>
+                  <option value="de">Deutsch (German)</option>
                 </select>
               </div>
             </div>
@@ -450,7 +479,7 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
 
             {/* Pro Tier */}
             <div className="bg-[#141220] border border-indigo-900/60 rounded-xl p-4 space-y-2">
-              <div className="font-bold text-indigo-300">ኤርትራዊ AI Pro</div>
+              <div className="font-bold text-indigo-300">ኣክሱማይት AI Pro</div>
               <div className="text-[11px] text-slate-400">Standard paid subscriber tier</div>
               <input
                 type="number"
@@ -675,6 +704,58 @@ export const AdminConfigView: React.FC<AdminConfigViewProps> = ({
                 />
                 <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
               </label>
+            </div>
+
+            {/* Churn Alert Push Notification Feature */}
+            <div className="md:col-span-2 p-4 rounded-xl bg-[#171329] border border-amber-500/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-amber-300 flex items-center space-x-2">
+                    <Bell className="w-4 h-4 text-amber-400" />
+                    <span>Automated Push Notification on Subscription Churn Spike</span>
+                  </div>
+                  <div className="text-[11px] text-slate-300 mt-0.5">
+                    Proactively alert admins via notificationService whenever 30-day churn rate exceeds defined ceiling
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.enableChurnAlert ?? true}
+                    onChange={(e) => setConfig({ ...config, enableChurnAlert: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#342750]">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                    Churn Alert Ceiling Threshold (%)
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="range"
+                      min="1.0"
+                      max="10.0"
+                      step="0.1"
+                      value={config.churnThreshold ?? 3.0}
+                      onChange={(e) => setConfig({ ...config, churnThreshold: parseFloat(e.target.value) || 3.0 })}
+                      className="w-full accent-amber-400 cursor-pointer"
+                    />
+                    <span className="px-2 py-1 bg-[#100D1C] border border-amber-500/50 rounded-lg text-amber-300 font-mono font-bold text-xs min-w-[50px] text-center">
+                      {(config.churnThreshold ?? 3.0).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-[11px] text-gray-300 bg-[#100D1C] p-2.5 rounded-xl border border-slate-800">
+                  <span>
+                    Current baseline churn is <strong className="text-emerald-400">1.8%</strong>. Push alerts will trigger if monthly churn reaches <strong className="text-amber-300">{(config.churnThreshold ?? 3.0).toFixed(1)}%</strong>.
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

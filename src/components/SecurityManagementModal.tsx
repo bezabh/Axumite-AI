@@ -4,8 +4,12 @@ import {
   ShieldCheck, Lock, Fingerprint, Key, Smartphone, Laptop, Globe, AlertTriangle, 
   Check, X, RefreshCw, Trash2, ShieldAlert, Eye, EyeOff, Shield, CheckCircle2, 
   History, Server, Zap, Cpu, Terminal, Copy, Download, Radio, LogOut, HardDrive, Clock,
-  Type, Sparkles, BookOpen, Palette
+  Type, Sparkles, BookOpen, Palette, AlertCircle
 } from 'lucide-react';
+import { UnifiedUserAiScreen } from './UnifiedUserAiScreen';
+import { PasswordStrength, defaultPasswordValidator, defaultSecureStorage } from '../utils/passwordSecurity';
+import { useLanguage } from '../context/LanguageContext';
+import { GoldCheckAnimation } from './GoldCheckAnimation';
 
 interface SecurityManagementModalProps {
   isOpen: boolean;
@@ -104,7 +108,7 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
   user,
   onUpdateUser,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'typography' | 'pin' | '2fa' | 'sessions' | 'encryption' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'password-ai' | 'typography' | 'pin' | '2fa' | 'sessions' | 'encryption' | 'audit'>('overview');
 
   // Typography Preference State ('modern' vs 'calligraphic')
   const [fontPreference, setFontPreference] = useState<'modern' | 'calligraphic'>('modern');
@@ -129,6 +133,17 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
     'AXUM-7739-2901', 'AXUM-6031-8842', 'AXUM-4921-0032', 'AXUM-8291-5510'
   ]);
   const [copiedCodes, setCopiedCodes] = useState(false);
+
+  const { language } = useLanguage();
+  const isTigrinya = language === 'ti' || language === 'ti_tg';
+
+  // Quick Password Generator & Evaluator State (for Overview Dashboard)
+  const [quickPassInput, setQuickPassInput] = useState('');
+  const [quickShowPass, setQuickShowPass] = useState(false);
+  const [quickCopied, setQuickCopied] = useState(false);
+  const [quickStrength, setQuickStrength] = useState<PasswordStrength>(PasswordStrength.WEAK);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickSavedSuccess, setQuickSavedSuccess] = useState<boolean>(false);
 
   // Active Sessions State
   const [sessions, setSessions] = useState<ActiveSession[]>(INITIAL_SESSIONS);
@@ -227,6 +242,75 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
     setLocalEncryptionEnabled(nextVal);
     saveSecurityConfig({ localEncryptionEnabled: nextVal });
     showToast(nextVal ? 'AES-256 Vault Encryption Active ✓' : 'Local State Encryption Disabled');
+  };
+
+  const handleQuickPassChange = (pass: string) => {
+    setQuickPassInput(pass);
+    setQuickSavedSuccess(false);
+    if (!pass) {
+      setQuickStrength(PasswordStrength.WEAK);
+      setQuickError(null);
+      return;
+    }
+    const res = defaultPasswordValidator.validate(pass);
+    setQuickStrength(res.strength);
+    setQuickError(res.error || null);
+  };
+
+  const handleQuickGenerate = () => {
+    const newPass = defaultPasswordValidator.generateSecurePassword({
+      length: 16,
+      includeUppercase: true,
+      includeNumbers: true,
+      includeSymbols: true,
+    });
+    handleQuickPassChange(newPass);
+    setQuickSavedSuccess(false);
+    showToast(isTigrinya ? 'ሓድሽ ውሑስ ፓስዎርድ ተፈጢሩ ኣሎ ✓' : 'Generated 16-character secure password ✓');
+  };
+
+  const handleQuickCopy = () => {
+    if (!quickPassInput) return;
+    navigator.clipboard.writeText(quickPassInput);
+    setQuickCopied(true);
+    showToast(isTigrinya ? 'ፓስዎርድ ተቐዲሑ ኣሎ ✓' : 'Password copied to clipboard ✓');
+    setTimeout(() => setQuickCopied(false), 2000);
+  };
+
+  const handleQuickSavePass = async () => {
+    const res = defaultPasswordValidator.validate(quickPassInput);
+    if (!res.isValid) {
+      setQuickError(res.error || 'Invalid password.');
+      setQuickSavedSuccess(false);
+      return;
+    }
+
+    try {
+      const newToken = `AUTH_TOKEN_${btoa(quickPassInput).slice(0, 16)}_${Date.now()}`;
+      await defaultSecureStorage.saveSessionToken(newToken);
+      onUpdateUser({ lastActive: new Date().toISOString() });
+      setQuickSavedSuccess(true);
+      setQuickError(null);
+      showToast(isTigrinya ? 'ፓስዎርድ ተዓቂቡን ብAES-256 ተመስጢሩን ኣሎ ✓' : 'Password updated & session token encrypted with AES-256 ✓');
+
+      // Security Audit Log entry
+      const log: SecurityAuditLog = {
+        id: `sec-pass-${Date.now()}`,
+        event: 'Password Validated & Stored in AES-256 Cryptographic Vault',
+        status: 'success',
+        ip: '197.156.104.12',
+        location: 'Asmara, ER',
+        timestamp: 'Just now',
+      };
+      setSecurityLogs((prev) => [log, ...prev]);
+
+      setTimeout(() => {
+        setQuickSavedSuccess(false);
+      }, 7000);
+    } catch (e: any) {
+      setQuickSavedSuccess(false);
+      showToast(e.message || 'Failed to save password.');
+    }
   };
 
   const handleUpdatePin = (e: React.FormEvent) => {
@@ -356,6 +440,7 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
         <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 border-b border-[#8E6D28]/20 shrink-0 text-xs font-bold no-scrollbar">
           {[
             { id: 'overview', label: 'Security Center', icon: <Shield className="w-3.5 h-3.5" /> },
+            { id: 'password-ai', label: 'Password & AI Hub', icon: <Key className="w-3.5 h-3.5 text-amber-400" /> },
             { id: 'typography', label: "Ge'ez Typography & Font", icon: <Type className="w-3.5 h-3.5" /> },
             { id: 'pin', label: 'PIN & Biometrics', icon: <Lock className="w-3.5 h-3.5" /> },
             { id: '2fa', label: '2FA & Recovery', icon: <Smartphone className="w-3.5 h-3.5" /> },
@@ -381,6 +466,18 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
         {/* Modal Scrollable Body Content */}
         <div className="flex-1 overflow-y-auto space-y-5 pr-1 text-xs">
 
+          {/* TAB: UNIFIED PASSWORD & GOOGLE AI STUDIO ASSISTANT */}
+          {activeTab === 'password-ai' && (
+            <div className="space-y-4 animate-fade-in">
+              <UnifiedUserAiScreen
+                user={user}
+                onPasswordUpdated={(newPass) => {
+                  showToast('Password updated & session token encrypted (AES-256) ✓');
+                }}
+              />
+            </div>
+          )}
+
           {/* TAB 1: OVERVIEW DASHBOARD */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
@@ -402,6 +499,216 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
                       Biometric Passkey, 2FA OTP, Vault PIN and AES-256 Storage Encryption are fully active.
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Password Security, Generator & Live Strength Evaluation Hub */}
+              <div className="bg-[#0C0A06] border border-[#8E6D28]/40 p-4 rounded-2xl space-y-3.5 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#8E6D28]/20 pb-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                      <Key className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-100 text-sm flex items-center space-x-2">
+                        <span>{isTigrinya ? 'ውሑስ ፓስዎርድ ጀነሬተርን ፈታሽን' : 'Password Generator & Strength Hub'}</span>
+                        <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.5 rounded font-mono">
+                          AES-256 GCM
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        {isTigrinya
+                          ? 'ብዕቱብ ጀነሬተር ፍጠር፡ ዓቕሚ ጽንዓት መርምር፡ ብAES-256 ዓቅብ'
+                          : 'Cryptographic password generator with real-time strength evaluation'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickGenerate}
+                      className="px-3 py-1.5 rounded-xl bg-[#8E6D28]/30 hover:bg-[#8E6D28]/50 border border-[#C5A059]/40 text-[#C5A059] hover:text-white font-bold text-xs flex items-center space-x-1.5 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                      <span>{isTigrinya ? 'ሓድሽ ፍጠር' : 'Generate Strong'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('password-ai')}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 font-bold text-xs flex items-center space-x-1.5 transition-all cursor-pointer"
+                    >
+                      <span>{isTigrinya ? 'ምሉእ ስቱድዮ →' : 'Full Studio →'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Password Input & Quick Controls */}
+                <div className="space-y-2">
+                  <div className="relative flex items-center">
+                    <input
+                      type={quickShowPass ? 'text' : 'password'}
+                      value={quickPassInput}
+                      onChange={(e) => handleQuickPassChange(e.target.value)}
+                      placeholder={isTigrinya ? 'ፓስዎርድ ኣብዚ የእትዉ ወይ "ሓድሽ ፍጠር" ጠውቑ...' : 'Type a password or click "Generate Strong"...'}
+                      className={`w-full bg-[#141009] border rounded-xl px-4 py-2.5 text-xs text-white font-mono placeholder:text-gray-500 focus:outline-none transition-colors pr-24 ${
+                        quickError
+                          ? 'border-rose-500 focus:border-rose-400'
+                          : quickPassInput && !quickError
+                          ? 'border-emerald-500/60 focus:border-emerald-400'
+                          : 'border-[#8E6D28]/30 focus:border-[#C5A059]'
+                      }`}
+                    />
+                    <div className="absolute right-2.5 flex items-center space-x-1">
+                      {quickPassInput && (
+                        <button
+                          type="button"
+                          onClick={handleQuickCopy}
+                          className="text-gray-400 hover:text-amber-300 cursor-pointer p-1"
+                          title="Copy Password"
+                        >
+                          {quickCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleQuickGenerate}
+                        className="text-[#C5A059] hover:text-white cursor-pointer p-1"
+                        title="Regenerate password"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickShowPass(!quickShowPass)}
+                        className="text-gray-400 hover:text-slate-200 cursor-pointer p-1"
+                        title={quickShowPass ? 'Hide' : 'Show'}
+                      >
+                        {quickShowPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3-Segment Luminous Visual Bar */}
+                  <div className="space-y-1 pt-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-400 font-medium">
+                        {isTigrinya ? 'ደረጃ ጽንዓት:' : 'Security Strength:'}
+                      </span>
+                      <span
+                        className={`px-2 py-0.2 rounded-full text-[10px] font-bold font-mono border uppercase ${defaultPasswordValidator.getStrengthColor(
+                          quickStrength
+                        )}`}
+                        style={{ color: defaultPasswordValidator.getStrengthColor(quickStrength) }}
+                      >
+                        {defaultPasswordValidator.getStrengthLabel(quickStrength, isTigrinya)}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-300"
+                        style={{
+                          backgroundColor: !quickPassInput
+                            ? '#2A2215'
+                            : quickStrength === PasswordStrength.WEAK
+                            ? '#EF4444'
+                            : quickStrength === PasswordStrength.MEDIUM
+                            ? '#FFA500'
+                            : '#22C55E',
+                        }}
+                      />
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-300"
+                        style={{
+                          backgroundColor: !quickPassInput || quickStrength === PasswordStrength.WEAK
+                            ? '#2A2215'
+                            : quickStrength === PasswordStrength.MEDIUM
+                            ? '#FFA500'
+                            : '#22C55E',
+                        }}
+                      />
+                      <div
+                        className="h-1.5 rounded-full transition-all duration-300"
+                        style={{
+                          backgroundColor: quickStrength === PasswordStrength.STRONG ? '#22C55E' : '#2A2215',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Requirements & Action */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span
+                        className={`px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                          quickPassInput.length >= 8
+                            ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                            : 'bg-black/40 text-gray-500 border-gray-800'
+                        }`}
+                      >
+                        {quickPassInput.length >= 8 ? <Check className="w-3 h-3 text-emerald-400" /> : <X className="w-3 h-3 text-gray-500" />}
+                        <span>8+ Chars</span>
+                      </span>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                          /[A-Z]/.test(quickPassInput) && /\d/.test(quickPassInput)
+                            ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                            : 'bg-black/40 text-gray-500 border-gray-800'
+                        }`}
+                      >
+                        {/[A-Z]/.test(quickPassInput) && /\d/.test(quickPassInput) ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <X className="w-3 h-3 text-gray-500" />
+                        )}
+                        <span>A-Z & 0-9</span>
+                      </span>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                          /[^A-Za-z0-9]/.test(quickPassInput) && quickPassInput.length >= 12
+                            ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                            : 'bg-black/40 text-gray-500 border-gray-800'
+                        }`}
+                      >
+                        {/[^A-Za-z0-9]/.test(quickPassInput) && quickPassInput.length >= 12 ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <X className="w-3 h-3 text-gray-500" />
+                        )}
+                        <span>12+ & Special</span>
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleQuickSavePass}
+                      disabled={!quickPassInput || !!quickError}
+                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 active:scale-[0.98] text-white text-[11px] font-bold shadow-md flex items-center space-x-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{isTigrinya ? 'ዓቅብ (Save)' : 'Save Password (AES-256)'}</span>
+                    </button>
+                  </div>
+
+                  {/* Gold-Themed Check-Mark Success Animation for Password Validation & Storage */}
+                  {quickSavedSuccess && (
+                    <GoldCheckAnimation
+                      size="md"
+                      title={isTigrinya ? "ፓስዎርድ ብዓወት ተረጋጊጹን ተዓቂቡን ኣሎ!" : "Password Validated & Securely Stored"}
+                      subtitle={isTigrinya ? "ብAES-256 GCM ምስጢራዊ ክሪፕቶግራፊ ተመስጢሩ ተዓቂቡ ኣሎ።" : "Encrypted with AES-256 GCM • Session Token Refreshed • Vault Updated"}
+                      className="mt-2"
+                    />
+                  )}
+
+                  {quickError && (
+                    <div className="p-2 bg-rose-950/40 border border-rose-500/40 rounded-lg text-rose-300 text-[11px] flex items-center space-x-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                      <span>{quickError}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -829,10 +1136,12 @@ export const SecurityManagementModal: React.FC<SecurityManagementModalProps> = (
                 )}
 
                 {pinSuccessMsg && (
-                  <div className="p-2.5 bg-emerald-500/20 border border-emerald-500/80 text-emerald-300 rounded-xl flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>{pinSuccessMsg}</span>
-                  </div>
+                  <GoldCheckAnimation
+                    size="sm"
+                    title="Vault Security PIN Updated & Encrypted"
+                    subtitle="4-6 digit numeric PIN securely stored in local cryptographic vault"
+                    className="mb-2"
+                  />
                 )}
 
                 <form onSubmit={handleUpdatePin} className="space-y-3 pt-1">

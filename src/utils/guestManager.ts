@@ -76,7 +76,7 @@ export const checkGuestLimit = (
   }
 
   // If role is Pro, Scholar, or has special privilege
-  if (role === 'Axumite Sovereign Scholar' || role === 'ኤርትራዊ AI Pro') {
+  if (role === 'Axumite Sovereign Scholar' || role === 'ኣክሱማይት AI Pro') {
     return { allowed: true, remaining: 999999, max: 999999, used: 0 };
   }
 

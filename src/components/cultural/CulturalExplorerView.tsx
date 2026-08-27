@@ -48,14 +48,14 @@ export const CulturalExplorerView: React.FC<CulturalExplorerViewProps> = ({
         <div>
           <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs tracking-wider uppercase mb-1">
             <Heart className="w-4 h-4 text-rose-400" />
-            <span>TIGRAY & ERITREA LIVING HERITAGE & AI PRESERVATION</span>
+            <span>TIGRAY LIVING HERITAGE & AI PRESERVATION</span>
           </div>
           <h1 className="text-3xl font-extrabold text-stone-100 tracking-tight">
-            {language === 'ti' ? 'ባህላውን ታሪኻውን ውርሻ (Cultural AI)' : language === 'de' ? 'Kulturerbe Tigray & Eritrea' : 'Tigray & Eritrea Cultural AI Experience'}
+            {language === 'ti' ? 'ባህላውን ታሪኻውን ውርሻ ትግራይ (Cultural AI)' : language === 'de' ? 'Kulturerbe Tigray' : 'Tigray Cultural AI Experience'}
           </h1>
           <p className="text-stone-400 text-sm mt-1 max-w-2xl">
             {language === 'ti'
-              ? 'ጥንታዊ ስልጣነ ኣክሱም፡ ይሓ፡ ቆሓይቶ፡ መተራ፡ ባጽዕን ኣስመራን፡ ምስላታት ትግርኛ፡ ባህላዊ ሙዚቃን ዛንታታትን ብAI ንዘለኣለም ተዓቒቡ ይነብር።'
+              ? 'ጥንታዊ ስልጣነ ኣክሱም፡ ይሓ፡ ውቕሮ፡ ገራዕልታ፡ መቐለ፡ ምስላታት ትግርኛ፡ ባህላዊ ሙዚቃን ዛንታታትን ብAI ንዘለኣለም ተዓቒቡ ይነብር።'
               : language === 'de'
               ? 'Erleben und bewahren Sie die reiche Geschichte, Architektur, Poesie, Kulinarik und Weisheiten von Tigray und Eritrea mit KI.'
               : 'Preserving millennia of civilization: archaeological monuments, oral wisdom, the Buna coffee ceremony, traditional music, and digital archives.'}

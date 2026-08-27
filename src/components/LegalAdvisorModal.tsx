@@ -29,7 +29,7 @@ export const LegalAdvisorModal: React.FC<LegalAdvisorModalProps> = ({
         ? 'ናይ ንግዲ ፍቓድ ምውጻእ፣ ውዕል ምምስራት፣ ሕጊ ግብሪን ቀረጽን' 
         : 'Business registration, partnership agreements, taxation rules and licensing.',
       prompt: language === 'ti'
-        ? 'እባክኻ ኣብ ኤርትራን ዲያስፖራን ንግዲ ንምጅማር ዘድልዩ ሕጋዊ ቅጥዕታት፣ ምዝገባን ናይ ግብሪ ሕግታትን ብዝርዝር ግለጸለይ።'
+        ? 'እባክኻ ኣብ ትግራይን ዲያስፖራን ንግዲ ንምጅማር ዘድልዩ ሕጋዊ ቅጥዕታት፣ ምዝገባን ናይ ግብሪ ሕግታትን ብዝርዝር ግለጸለይ።'
         : 'Please provide a detailed legal overview of commercial registration requirements, trade licenses, and tax obligations.',
     },
     {

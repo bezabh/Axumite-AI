@@ -11,6 +11,7 @@ import { ProClickEarning } from './ProClickEarning';
 import { GlobalCommunityLeaderboard } from './GlobalCommunityLeaderboard';
 import { PricingPlanComparisonModal } from './PricingPlanComparisonModal';
 import { InvoiceReceiptModal } from './InvoiceReceiptModal';
+import { ModernCheckoutView } from './ModernCheckoutView';
 import { useSubscription, InvoiceItem } from '../context/SubscriptionContext';
 import { useLanguage } from '../context/LanguageContext';
 import bankIconImg from '../assets/images/sovereign_bank_icon_1786607928857.jpg';
@@ -52,7 +53,7 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
     simulatePaymentFailureAlert,
   } = useSubscription();
 
-  const [activeTab, setActiveTab] = useState<'checkout' | 'subscription' | 'invoices' | 'bank-portal' | 'pro-earnings' | 'diagnostics'>('checkout');
+  const [activeTab, setActiveTab] = useState<'checkout' | 'mobile-checkout' | 'subscription' | 'invoices' | 'bank-portal' | 'pro-earnings' | 'diagnostics'>('checkout');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly' | 'one_time'>('yearly');
   const [selectedPlanId, setSelectedPlanId] = useState<'free' | 'pro' | 'enterprise' | 'lifetime'>('pro');
   const [withTrial, setWithTrial] = useState(true);
@@ -98,33 +99,33 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
   const BANK_DIRECTORY = [
     {
       key: 'cbe-er',
-      name: 'ናይ ኤርትራ ንግዲ ባንክ (Commercial Bank of Eritrea)',
-      accountName: 'AXUMITE AI SOVEREIGN ERITREA LTD',
+      name: 'ናይ ትግራይ ንግዲ ባንክ (Commercial Bank of Tigray)',
+      accountName: 'AXUMITE AI SOVEREIGN TIGRAY LTD',
       accountNumber: '20194829103',
-      swift: 'CBOEERAS',
-      branch: 'Harnet Avenue Main Branch, Asmara',
-      badge: 'Commercial Bank 🇪🇷',
-      descriptionTi: 'ቀጥታ ብናይ ኤርትራ ንግዲ ባንክ ሕሳብ ቑጽሪ ወይ ጨንፈር ክፍሊት ፈጽሙ።',
+      swift: 'CBOETGAS',
+      branch: 'Hawulti Avenue Main Branch, Mekelle',
+      badge: 'Commercial Bank 🏛️',
+      descriptionTi: 'ቀጥታ ብናይ ትግራይ ንግዲ ባንክ ሕሳብ ቑጽሪ ወይ ጨንፈር ክፍሊት ፈጽሙ።',
     },
     {
       key: 'boe',
-      name: 'ናይ ኤርትራ ማእከላይ ባንክ (Bank of Eritrea)',
+      name: 'ናይ ትግራይ ልምዓት ባንክ (Development Bank of Tigray)',
       accountName: 'AXUMITE AI ENTERPRISE',
       accountNumber: '10928374651',
-      swift: 'BERTERAS',
-      branch: 'Central Bank HQ, Asmara',
-      badge: 'Bank of Eritrea 🏛️',
-      descriptionTi: 'ብናይ ኤርትራ ማእከላይ ባንክ ወይ ዝተፈቐደሎም ትካላት ዝግበር ክፍሊት።',
+      swift: 'BERTGAS',
+      branch: 'Central Bank HQ, Mekelle',
+      badge: 'Bank of Tigray 🏛️',
+      descriptionTi: 'ብናይ ትግራይ ባንክ ወይ ዝተፈቐደሎም ትካላት ዝግበር ክፍሊት።',
     },
     {
       key: 'himbol',
-      name: 'ሂምቦል ናይ ኤርትራውያን ሓዋላ (Himbol Remittance)',
-      accountName: 'AXUMITE AI TECH HIMBOL',
+      name: 'ናይ ተጋሩ ዓለምለኸ ሓዋላ (Diaspora Remittance)',
+      accountName: 'AXUMITE AI TECH REMIT',
       accountNumber: '01320987654',
-      swift: 'HIMBERAS',
-      branch: 'Himbol Financial Services Asmara',
-      badge: 'Himbol 📱',
-      descriptionTi: 'ብሂምቦል ናይ ወጻኢ ሃገራት ሓዋላን ናቕፋ ክፍሊትን ብቕልጡፍ መፈጸሚ ቑጽሪ የእትዉ።',
+      swift: 'HIMBTGAS',
+      branch: 'Remittance Financial Services Mekelle',
+      badge: 'Remittance 📱',
+      descriptionTi: 'ብናይ ወጻኢ ሃገራት ሓዋላን ብር ክፍሊትን ብቕልጡፍ መፈጸሚ ቑጽሪ የእትዉ።',
     },
     {
       key: 'swift',
@@ -415,6 +416,19 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
         >
           <CreditCard className="w-4 h-4" />
           <span>{language === 'ti' ? 'ፕላናት & ክፍሊት (Plans & Checkout)' : 'Plans & Checkout'}</span>
+        </button>
+
+        <button
+          id="tab-mobile-checkout"
+          onClick={() => setActiveTab('mobile-checkout')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center space-x-2 transition-all cursor-pointer ${
+            activeTab === 'mobile-checkout'
+              ? 'bg-gradient-to-r from-[#0284C7] to-[#02639B] text-white shadow-lg shadow-sky-500/20'
+              : 'bg-[#151828] text-slate-300 hover:bg-[#1E2338]'
+          }`}
+        >
+          <Smartphone className="w-4 h-4 text-sky-400" />
+          <span>{language === 'ti' ? 'ሞባይል ክፍሊት (Mobile Checkout)' : 'Mobile Checkout'}</span>
         </button>
 
         <button
@@ -809,52 +823,28 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
                 </div>
               </div>
 
-              {/* If Direct Card Form */}
+              {/* If Direct Card Form: Render Modern Checkout View */}
               {paymentProvider === 'card' && (
-                <div className="p-4 bg-[#0E101D] rounded-xl border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span className="font-semibold text-slate-300">Direct Card Tokenization</span>
-                    <span className="text-[10px] text-emerald-400 flex items-center space-x-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      <span>256-bit TLS Encrypted</span>
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Card Number</label>
-                    <input
-                      id="card-number-input"
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      placeholder="4242 •••• •••• 4242"
-                      className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">Expiration</label>
-                      <input
-                        id="card-expiry-input"
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => setCardExpiry(e.target.value)}
-                        placeholder="MM/YY"
-                        className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">CVC / CVV</label>
-                      <input
-                        id="card-cvc-input"
-                        type="password"
-                        maxLength={4}
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value)}
-                        placeholder="•••"
-                        className="w-full bg-[#151828] border border-slate-700 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                <div className="pt-2 flex justify-center">
+                  <ModernCheckoutView
+                    user={user}
+                    planName={selectedPlanId === 'pro' ? 'Sovereign Pro' : selectedPlanId === 'enterprise' ? 'Enterprise Scriptorium' : 'Lifetime Sovereign'}
+                    planId={selectedPlanId}
+                    amountFormatted={getPlanPrice(selectedPlanId, selectedPlanId === 'lifetime' ? 'one_time' : billingCycle).formatted}
+                    rawAmount={getPlanPrice(selectedPlanId, selectedPlanId === 'lifetime' ? 'one_time' : billingCycle).raw}
+                    currency={selectedCurrency}
+                    billingCycle={selectedPlanId === 'lifetime' ? 'one_time' : billingCycle}
+                    withTrial={withTrial && selectedPlanId !== 'lifetime'}
+                    onBack={() => setPaymentProvider('stripe')}
+                    onManageOtherMethods={() => setActiveTab('bank-portal')}
+                    onSuccess={() => {
+                      setStatusMessage({
+                        type: 'success',
+                        text: language === 'ti' ? 'ክፍሊትኩም ብዓወት ተፈጺሙ ኣሎ!' : 'Payment processed successfully! Your subscription is active.',
+                      });
+                      setActiveTab('subscription');
+                    }}
+                  />
                 </div>
               )}
 
@@ -922,6 +912,70 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
 
             </div>
           )}
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: MOBILE / 3D CARD CHECKOUT (Design Pattern Integration)               */}
+      {/* ========================================================================= */}
+      {activeTab === 'mobile-checkout' && (
+        <div className="space-y-6 animate-fade-in flex flex-col items-center">
+          
+          {/* Plan Selector Pill for Mobile Checkout */}
+          <div className="flex flex-wrap items-center justify-center gap-2 bg-[#121422] p-2 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setSelectedPlanId('pro')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedPlanId === 'pro'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sovereign Pro ({getPlanPrice('pro', billingCycle).formatted})
+            </button>
+            <button
+              onClick={() => setSelectedPlanId('enterprise')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedPlanId === 'enterprise'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Enterprise ({getPlanPrice('enterprise', billingCycle).formatted})
+            </button>
+            <button
+              onClick={() => setSelectedPlanId('lifetime')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedPlanId === 'lifetime'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Lifetime ({getPlanPrice('lifetime', 'one_time').formatted})
+            </button>
+          </div>
+
+          {/* Render the Modern Checkout View */}
+          <ModernCheckoutView
+            user={user}
+            planName={selectedPlanId === 'pro' ? 'Sovereign Pro' : selectedPlanId === 'enterprise' ? 'Enterprise Scriptorium' : 'Lifetime Sovereign'}
+            planId={selectedPlanId}
+            amountFormatted={getPlanPrice(selectedPlanId, selectedPlanId === 'lifetime' ? 'one_time' : billingCycle).formatted}
+            rawAmount={getPlanPrice(selectedPlanId, selectedPlanId === 'lifetime' ? 'one_time' : billingCycle).raw}
+            currency={selectedCurrency}
+            billingCycle={selectedPlanId === 'lifetime' ? 'one_time' : billingCycle}
+            withTrial={withTrial && selectedPlanId !== 'lifetime'}
+            onBack={() => setActiveTab('checkout')}
+            onManageOtherMethods={() => setActiveTab('bank-portal')}
+            onSuccess={() => {
+              setStatusMessage({
+                type: 'success',
+                text: language === 'ti' ? 'ክፍሊትኩም ብዓወት ተፈጺሙ ኣሎ!' : 'Payment processed successfully! Your subscription is active.',
+              });
+              setActiveTab('subscription');
+            }}
+          />
 
         </div>
       )}
@@ -1211,9 +1265,9 @@ export const PaymentSystem: React.FC<PaymentSystemProps> = ({ onSaveInsight, use
                     onChange={(e) => setSelectedBankKey(e.target.value as any)}
                     className="w-full bg-[#0E101D] border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none"
                   >
-                    <option value="cbe-er">Commercial Bank of Eritrea (ናይ ኤርትራ ንግዲ ባንክ)</option>
-                    <option value="boe">Bank of Eritrea (ናይ ኤርትራ ማእከላይ ባንክ)</option>
-                    <option value="himbol">Himbol Remittance (ሂምቦል)</option>
+                    <option value="cbe-er">Commercial Bank of Tigray (ናይ ትግራይ ንግዲ ባንክ)</option>
+                    <option value="boe">Bank of Tigray (ናይ ትግራይ ባንክ)</option>
+                    <option value="himbol">Diaspora Remittance (ናይ ተጋሩ ሓዋላ)</option>
                     <option value="swift">SWIFT / International Diaspora Wire</option>
                   </select>
                 </div>

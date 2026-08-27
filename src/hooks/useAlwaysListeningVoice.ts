@@ -21,13 +21,7 @@ export interface AlwaysListeningVoiceActions {
 }
 
 export function useAlwaysListeningVoice(actions: AlwaysListeningVoiceActions) {
-  const [isAlwaysListening, setIsAlwaysListening] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('axumite_always_listening_voice') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isAlwaysListening, setIsAlwaysListening] = useState<boolean>(false);
 
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [lastHeardPhrase, setLastHeardPhrase] = useState<string | null>(null);
@@ -41,11 +35,6 @@ export function useAlwaysListeningVoice(actions: AlwaysListeningVoiceActions) {
   // Keep ref synchronized
   useEffect(() => {
     isEnabledRef.current = isAlwaysListening;
-    try {
-      localStorage.setItem('axumite_always_listening_voice', isAlwaysListening ? 'true' : 'false');
-    } catch {
-      // Storage errors ignored
-    }
   }, [isAlwaysListening]);
 
   // Match recognized spoken phrase against Axumite voice intents
@@ -347,8 +336,8 @@ export function useAlwaysListeningVoice(actions: AlwaysListeningVoiceActions) {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = false;
-      recognition.lang = 'ti-ER, ti-ET, en-US';
-      recognition.maxAlternatives = 3;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         setIsRecognizing(true);
@@ -367,16 +356,17 @@ export function useAlwaysListeningVoice(actions: AlwaysListeningVoiceActions) {
       };
 
       recognition.onerror = (event: any) => {
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed' || event.error === 'audio-capture') {
           setMicPermissionDenied(true);
           setIsAlwaysListening(false);
           isEnabledRef.current = false;
+          if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
         }
       };
 
       recognition.onend = () => {
         setIsRecognizing(false);
-        // Automatically restart if still in Always-Listening mode
+        // Automatically restart if still in Always-Listening mode and permissions valid
         if (isEnabledRef.current && !micPermissionDenied) {
           if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
           restartTimeoutRef.current = setTimeout(() => {
@@ -385,14 +375,15 @@ export function useAlwaysListeningVoice(actions: AlwaysListeningVoiceActions) {
                 recognition.start();
               } catch {}
             }
-          }, 300);
+          }, 400);
         }
       };
 
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (e) {
-      console.warn('Always-listening recognition start notice:', e);
+    } catch {
+      setIsAlwaysListening(false);
+      isEnabledRef.current = false;
     }
   }, [handleRecognizedSpeech, micPermissionDenied]);
 

@@ -152,7 +152,7 @@ export const SubscriptionProvider: React.FC<{
     if (subscription.tier === 'enterprise') {
       onUpdateUserRole('Axumite Sovereign Scholar');
     } else if (subscription.tier === 'pro' || subscription.tier === 'lifetime') {
-      onUpdateUserRole('ኤርትራዊ AI Pro');
+      onUpdateUserRole('ኣክሱማይት AI Pro');
     }
   }, [subscription.tier, onUpdateUserRole]);
 

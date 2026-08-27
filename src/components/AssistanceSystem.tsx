@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2, Sparkles, Wand2, Compass, BookOpen, RotateCcw, VolumeX, Shield, Play, Pause, ChevronDown, Radio, HelpCircle, BookMarked, Layers, MessageSquareText, RefreshCw } from 'lucide-react';
-import { AppTab } from '../types';
+import { Mic, MicOff, Volume2, Sparkles, Wand2, Compass, BookOpen, RotateCcw, VolumeX, Shield, Play, Pause, ChevronDown, Radio, HelpCircle, BookMarked, Layers, MessageSquareText, RefreshCw, Music2 } from 'lucide-react';
+import { AppTab, UserProfile } from '../types';
 import { AxumiteTimeline } from './AxumiteTimeline';
 import { VoiceCommandsModal } from './VoiceCommandsModal';
+import { SpeechStudioModal } from './SpeechStudioModal';
 import { base64PcmToWavDataUrl } from '../utils/welcomeAudioService';
 
 interface AssistanceSystemProps {
@@ -11,6 +12,7 @@ interface AssistanceSystemProps {
   onOpenUserModal?: () => void;
   onOpenSecurityModal?: () => void;
   onOpenPaymentModal?: () => void;
+  user?: UserProfile;
 }
 
 export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({ 
@@ -19,6 +21,7 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
   onOpenUserModal,
   onOpenSecurityModal,
   onOpenPaymentModal,
+  user = { id: 'default', name: 'Guest User', role: 'Guest' },
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -29,6 +32,8 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
   const [speechVolume, setSpeechVolume] = useState<number[]>(Array(14).fill(15));
   const [showAdvancedPanel, setShowAdvancedPanel] = useState(false);
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
+  const [isSpeechStudioOpen, setIsSpeechStudioOpen] = useState(false);
+  const [speechStudioMode, setSpeechStudioMode] = useState<'stt' | 'tts'>('stt');
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -177,7 +182,7 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
   };
 
   const handleExecuteVoiceQuery = async (queryText?: string) => {
-    const textToRun = queryText || voiceInput || transcript || "ብዛዕባ እዋናዊ ዜና ሃገርናን ፍሉይ ፍጻመ ኤርትራውያንን ሓበሬታ ሃበኒ";
+    const textToRun = queryText || voiceInput || transcript || "ብዛዕባ እዋናዊ ዜና ሃገርናን ፍሉይ ፍጻመ ተጋሩን ሓበሬታ ሃበኒ";
     if (!textToRun.trim()) return;
 
     // Check if it's an actionable shortcut command
@@ -376,7 +381,7 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
             <div className="flex items-center justify-between pb-1.5 border-b border-indigo-900/40">
               <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>ጓል ኤረይ (Eritrean AI)</span>
+                <span>ጓል ኣክሱም (Axumite AI)</span>
               </span>
               <div className="flex items-center gap-1.5">
                 <button
@@ -400,6 +405,53 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
           </div>
         )}
 
+        {/* Dual Purpose Quick Studio Launchers */}
+        <div className="w-full grid grid-cols-2 gap-2.5 pt-2">
+          {/* Purpose 1: ድምጺ ናብ ጽሑፍ */}
+          <button
+            type="button"
+            onClick={() => {
+              setSpeechStudioMode('stt');
+              setIsSpeechStudioOpen(true);
+            }}
+            className="bg-[#141220]/90 hover:bg-[#1C182E] border border-blue-500/30 hover:border-blue-500/60 rounded-2xl p-2.5 text-left transition-all group flex items-center space-x-2.5 cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#1D4ED8] via-[#2563EB] to-[#60A5FA] flex items-center justify-center text-white shadow-md shrink-0">
+              <Mic className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-white block group-hover:text-blue-300 transition-colors truncate">
+                ድምጺ ናብ ጽሑፍ
+              </span>
+              <span className="text-[10px] text-slate-400 block truncate">
+                Speech to Text
+              </span>
+            </div>
+          </button>
+
+          {/* Purpose 2: ጽሑፍ ናብ ድምጺ */}
+          <button
+            type="button"
+            onClick={() => {
+              setSpeechStudioMode('tts');
+              setIsSpeechStudioOpen(true);
+            }}
+            className="bg-[#141220]/90 hover:bg-[#1C182E] border border-red-500/30 hover:border-red-500/60 rounded-2xl p-2.5 text-left transition-all group flex items-center space-x-2.5 cursor-pointer"
+          >
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#DC2626] via-[#EF4444] to-[#F87171] flex items-center justify-center text-white shadow-md shrink-0">
+              <Volume2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-white block group-hover:text-red-300 transition-colors truncate">
+                ጽሑፍ ናብ ድምጺ
+              </span>
+              <span className="text-[10px] text-slate-400 block truncate">
+                Text to Speech
+              </span>
+            </div>
+          </button>
+        </div>
+
       </div>
 
       {/* Voice Commands Cheat Sheet Modal */}
@@ -409,6 +461,18 @@ export const AssistanceSystem: React.FC<AssistanceSystemProps> = ({
         onExecuteCommand={(cmd) => {
           setVoiceInput(cmd);
           handleExecuteVoiceQuery(cmd);
+        }}
+      />
+
+      {/* Dedicated Dual Purpose Speech Studio Modal */}
+      <SpeechStudioModal
+        isOpen={isSpeechStudioOpen}
+        onClose={() => setIsSpeechStudioOpen(false)}
+        initialMode={speechStudioMode}
+        user={user}
+        onNavigateToChat={(prompt) => {
+          setIsSpeechStudioOpen(false);
+          onNavigateTab('chat');
         }}
       />
 

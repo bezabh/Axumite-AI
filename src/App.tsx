@@ -19,17 +19,10 @@ import { BrandHeroModal } from './components/BrandHeroModal';
 import { PwaInstallModal } from './components/PwaInstallModal';
 import { AuthModal } from './components/AuthModal';
 import { IdleWarningModal } from './components/IdleWarningModal';
+import { AxumiteHibernationScreen } from './components/AxumiteHibernationScreen';
 import { useIdleTimer } from './hooks/useIdleTimer';
-import { WelcomeAudioGreetingToast } from './components/WelcomeAudioGreetingToast';
-import { 
-  playTigrinyaWelcomeAudio, 
-  hasWelcomeAudioPlayedInSession, 
-  markWelcomeAudioPlayedInSession, 
-  resetWelcomeAudioSession 
-} from './utils/welcomeAudioService';
 import { EritreanPremiereView } from './components/EritreanPremiereView';
 import { ManagementHub } from './components/ManagementHub';
-import { AxumiteCursorGuide } from './components/AxumiteCursorGuide';
 import { SovereignSideDrawer } from './components/SovereignSideDrawer';
 import { JobSearchModal } from './components/JobSearchModal';
 import { LegalAdvisorModal } from './components/LegalAdvisorModal';
@@ -50,6 +43,8 @@ import { useLanguage } from './context/LanguageContext';
 import { EducationPlatformView } from './components/education/EducationPlatformView';
 import { BusinessHubView } from './components/business/BusinessHubView';
 import { CulturalExplorerView } from './components/cultural/CulturalExplorerView';
+import { AndroidAppInterfaceView } from './components/AndroidAppInterfaceView';
+import { RewardsView } from './components/RewardsView';
 import { useSubscription } from './context/SubscriptionContext';
 import { AppNotification, NotificationPreferences } from './types';
 import { 
@@ -62,9 +57,15 @@ import {
   NOTIFICATION_EVENT_NAME
 } from './services/notificationService';
 import { playVoiceTriggerChime } from './utils/audioChime';
-import { syncUserProfileToFirestore } from './lib/firebase';
-import { WifiOff, RefreshCw, Hand, ChevronLeft, ChevronRight, Mic, Radio } from 'lucide-react';
-import logoImg from './assets/images/axumite_ai_logo_1786607890310.jpg';
+import { 
+  syncUserProfileToFirestore,
+  handleFirebaseRedirectResult,
+  onFirebaseAuthStateChanged,
+  fetchUserProfileFromFirestore
+} from './lib/firebase';
+import { useBrandingTheme } from './context/BrandingThemeContext';
+import { WifiOff, RefreshCw, Hand, ChevronLeft, ChevronRight } from 'lucide-react';
+import logoImg from './assets/images/axumite_3d_luxury_logo_1787505687476.jpg';
 import axumiteBgImg from './assets/images/axumite_background_1786611272574.jpg';
 
 const DEFAULT_USER: UserProfile = {
@@ -87,12 +88,19 @@ const DEFAULT_USER: UserProfile = {
 export default function App() {
   const { isProOrHigher } = useSubscription();
   const { language, setLanguage } = useLanguage();
+  const { 
+    setThemeScheme, 
+    setGoldIntensity, 
+    setThemeHue, 
+    setGoldShimmerEffect, 
+    setBorderGlow 
+  } = useBrandingTheme();
   const [activeTab, setActiveTab] = useState<AppTab>('premiere');
   const [isPwaModalOpen, setIsPwaModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
-  const [cursorSignal, setCursorSignal] = useState(0);
+  const [isHibernationOpen, setIsHibernationOpen] = useState(false);
   
   // Sovereign All-Tools Drawer and Specialized AI Modals State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -240,7 +248,6 @@ export default function App() {
 
   const triggerCursorToChat = () => {
     setActiveTab('chat');
-    setCursorSignal((prev) => prev + 1);
   };
 
   const handleSelectPromptForChat = (prompt: string) => {
@@ -250,10 +257,10 @@ export default function App() {
   
   // Auth & OTP Verification Modal State
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'verify'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'verify' | 'forgot_password'>('login');
   const [authReason, setAuthReason] = useState<string | undefined>(undefined);
 
-  const handleOpenAuthModal = (mode: 'login' | 'signup' | 'verify', reason?: string) => {
+  const handleOpenAuthModal = (mode: 'login' | 'signup' | 'verify' | 'forgot_password', reason?: string) => {
     setAuthMode(mode);
     setAuthReason(reason);
     setIsAuthModalOpen(true);
@@ -324,20 +331,71 @@ export default function App() {
     }
   }, [user]);
 
-  const [isWelcomeAudioToastVisible, setIsWelcomeAudioToastVisible] = useState(false);
+  // Firebase Auth Redirect Resolution & Continuous Session Synchronization
+  useEffect(() => {
+    let isMounted = true;
 
-  const triggerWelcomeAudioGreeting = (force = false, customEmail?: string, customName?: string) => {
-    const targetEmail = customEmail || user?.email;
-    const targetName = customName || user?.name;
-    if (!user && !targetEmail) return;
-    if (force || !hasWelcomeAudioPlayedInSession(targetEmail)) {
-      markWelcomeAudioPlayedInSession(targetEmail);
-      setIsWelcomeAudioToastVisible(true);
-      setTimeout(() => {
-        playTigrinyaWelcomeAudio(targetEmail, targetName);
-      }, 500);
-    }
-  };
+    // 1. Check and resolve any redirect results from Firebase Auth to prevent initial login sequence errors
+    handleFirebaseRedirectResult()
+      .then((redirectedProfile) => {
+        if (redirectedProfile && isMounted) {
+          handleUpdateUser({
+            ...redirectedProfile,
+            isLoggedIn: true,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Firebase initial redirect resolution notice:', err);
+      });
+
+    // 2. Continuous Firebase Auth state listener to synchronize session
+    const unsubscribe = onFirebaseAuthStateChanged(async (fbUser) => {
+      if (!isMounted) return;
+      if (fbUser && fbUser.email) {
+        const email = fbUser.email.trim().toLowerCase();
+        const isSuperadmin = email === 'beckylove2004@gmail.com';
+        
+        try {
+          const cloudProfile = await fetchUserProfileFromFirestore(email);
+          if (cloudProfile && isMounted) {
+            // Restore theme preferences from Firestore cloud profile
+            if (cloudProfile.themePreference) {
+              setThemeScheme(cloudProfile.themePreference);
+            }
+            if (cloudProfile.themeConfig) {
+              if (cloudProfile.themeConfig.goldIntensity) setGoldIntensity(cloudProfile.themeConfig.goldIntensity);
+              if (cloudProfile.themeConfig.themeHue) setThemeHue(cloudProfile.themeConfig.themeHue as any);
+              if (typeof cloudProfile.themeConfig.goldShimmerEffect === 'boolean') setGoldShimmerEffect(cloudProfile.themeConfig.goldShimmerEffect);
+              if (typeof cloudProfile.themeConfig.borderGlow === 'boolean') setBorderGlow(cloudProfile.themeConfig.borderGlow);
+            }
+
+            handleUpdateUser({
+              ...cloudProfile,
+              isLoggedIn: true,
+              isEmailVerified: fbUser.emailVerified || cloudProfile.isEmailVerified || isSuperadmin,
+            });
+          } else if (isMounted) {
+            handleUpdateUser({
+              id: fbUser.uid,
+              name: fbUser.displayName || (isSuperadmin ? 'Becky Love (Superadmin)' : 'Axumite Member'),
+              email,
+              isLoggedIn: true,
+              isEmailVerified: fbUser.emailVerified || isSuperadmin,
+              role: isSuperadmin ? 'Creator' : 'Guest',
+            });
+          }
+        } catch (profileErr) {
+          console.warn('Auth state profile fetch notice:', profileErr);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   const handleUpdateUser = (updated: Partial<UserProfile>) => {
     setUser((prev) => {
@@ -353,44 +411,22 @@ export default function App() {
         next.role = 'Guest';
       }
 
-      // Trigger Tigrinya audio welcome greeting on explicit login, account switch, or login transition
       const isExplicitLogin = updated.isLoggedIn === true;
       const isAccountSwitch = prev.email && next.email && prev.email.toLowerCase() !== next.email.toLowerCase();
       const isStateLogin = !prev.isLoggedIn && next.isLoggedIn;
 
       if ((isExplicitLogin && next.isLoggedIn) || isStateLogin || isAccountSwitch) {
-        markWelcomeAudioPlayedInSession(next.email);
-        setIsWelcomeAudioToastVisible(true);
         setTimeout(() => {
-          playTigrinyaWelcomeAudio(next.email, next.name);
-        }, 500);
-
-        setTimeout(() => {
-          triggerCursorToChat();
-        }, 300);
-      } else if (prev.isLoggedIn && !next.isLoggedIn) {
-        resetWelcomeAudioSession(prev.email);
-        setIsWelcomeAudioToastVisible(false);
+          setActiveTab('premiere');
+        }, 50);
       }
       return next;
     });
   };
 
-  // Trigger audio welcome greeting on initial active session if not yet played
-  useEffect(() => {
-    if (user?.isLoggedIn && !hasWelcomeAudioPlayedInSession(user.email)) {
-      const timer = setTimeout(() => {
-        triggerWelcomeAudioGreeting(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [user?.isLoggedIn, user?.email]);
-
   // 30-Minute Inactivity Idle Auto-Logout Security Shield
   const handleIdleAutoLogout = () => {
     if (user?.isLoggedIn) {
-      resetWelcomeAudioSession(user.email);
-      setIsWelcomeAudioToastVisible(false);
       handleUpdateUser({ isLoggedIn: false });
       setAuthReason('🔒 ድሕንነትኩም ንምሕላው፡ ብሰንኪ 30 ደቓይቕ ዘይምንቅስቓስ ብኣውቶማቲክ ወጺእኩም ኣለኹም (Logged out automatically after 30 minutes of inactivity for your account security. Please sign in again).');
       setAuthMode('login');
@@ -475,6 +511,7 @@ export default function App() {
     { id: 'vision', labelTi: 'ምስሊ (Vision)', labelEn: 'Vision' },
     { id: 'prompt-forge', labelTi: 'ፕሮምፕት (Forge)', labelEn: 'Forge' },
     { id: 'translator', labelTi: 'ትርጉም (Translate)', labelEn: 'Translate' },
+    { id: 'rewards', labelTi: 'ዓስብን ቦነስን (Rewards)', labelEn: 'Rewards' },
     { id: 'saved', labelTi: 'ተዓቂቡ (Saved)', labelEn: 'Saved' },
   ];
 
@@ -617,15 +654,54 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* Animated Slide Tab Container */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: swipeDirection === 'left' ? 24 : -24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: swipeDirection === 'left' ? -24 : 24 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
+        {/* Animated Slide Tab Container with Luxury Fading-Gold Entrance */}
+        <div className="relative w-full">
+          {/* Subtle Ambient Fading-Gold Halo that Blooms and Evaporates on Tab Switch */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`gold-veil-${activeTab}`}
+              initial={{ opacity: 0.65, scale: 0.96 }}
+              animate={{ opacity: 0, scale: 1.05 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute -top-8 left-1/2 -translate-x-1/2 w-full max-w-3xl h-36 bg-gradient-to-b from-amber-400/20 via-[#E1C47D]/10 to-transparent blur-3xl pointer-events-none rounded-full z-0"
+            />
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ 
+                opacity: 0, 
+                x: swipeDirection === 'left' ? 16 : swipeDirection === 'right' ? -16 : 0,
+                y: 8,
+                scale: 0.99,
+                filter: 'drop-shadow(0 0 20px rgba(225, 196, 125, 0.4)) brightness(1.08)'
+              }}
+              animate={{ 
+                opacity: 1, 
+                x: 0, 
+                y: 0,
+                scale: 1,
+                filter: 'drop-shadow(0 0 0px rgba(225, 196, 125, 0)) brightness(1)'
+              }}
+              exit={{ 
+                opacity: 0, 
+                x: swipeDirection === 'left' ? -16 : swipeDirection === 'right' ? 16 : 0,
+                y: -6,
+                scale: 0.99,
+                filter: 'brightness(0.98)'
+              }}
+              transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+              className="relative z-10"
+            >
+              {/* Golden Top Shimmer Hairline on Entrance */}
+              <motion.div
+                initial={{ opacity: 0.85, scaleX: 0.2, x: '-50%' }}
+                animate={{ opacity: 0, scaleX: 1.1, x: '50%' }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1.5px] bg-gradient-to-r from-transparent via-[#E1C47D] to-transparent pointer-events-none z-20 shadow-[0_0_10px_#E1C47D]"
+              />
             {activeTab === 'chat' && (
               <ObeliskChat 
                 onSaveInsight={handleSaveInsight} 
@@ -643,6 +719,7 @@ export default function App() {
                 onOpenUserModal={() => setIsUserModalOpen(true)}
                 onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
                 onOpenPaymentModal={() => setActiveTab('payment')}
+                user={user}
               />
             )}
 
@@ -726,6 +803,7 @@ export default function App() {
                 onOpenNotifications={() => setIsNotificationCenterOpen(true)}
                 onOpenVideoTranslator={() => setIsVideoTranslatorOpen(true)}
                 onOpenVoiceOverlay={() => setIsVoiceOverlayOpen(true)}
+                onOpenHibernation={() => setIsHibernationOpen(true)}
               />
             )}
 
@@ -775,18 +853,34 @@ export default function App() {
                 onUpdateUser={handleUpdateUser}
               />
             )}
+
+            {activeTab === 'system-activity' && (
+              <ManagementHub
+                initialSection="activity"
+                user={user}
+                onUpdateUser={handleUpdateUser}
+              />
+            )}
+
+            {activeTab === 'android-app' && (
+              <AndroidAppInterfaceView
+                user={user}
+                onNavigateTab={setActiveTab}
+                onOpenAuthModal={handleOpenAuthModal}
+              />
+            )}
+
+            {activeTab === 'rewards' && (
+              <RewardsView
+                onBack={() => setActiveTab('premiere')}
+                onNavigateTab={setActiveTab}
+                user={user}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
+        </div>
       </main>
-
-      {/* Axumite Animated Golden Cursor Starter Guide */}
-      <AxumiteCursorGuide 
-        triggerSignal={cursorSignal} 
-        onTriggerVoice={() => {
-          playVoiceTriggerChime();
-          setIsVoiceOverlayOpen(true);
-        }}
-      />
 
       {/* Sovereign AI All-Tools Side Drawer matching User Screenshot */}
       <SovereignSideDrawer
@@ -846,6 +940,10 @@ export default function App() {
         onOpenFileVault={() => {
           setIsDrawerOpen(false);
           setIsUserFileVaultOpen(true);
+        }}
+        onOpenHibernation={() => {
+          setIsDrawerOpen(false);
+          setIsHibernationOpen(true);
         }}
       />
 
@@ -931,6 +1029,10 @@ export default function App() {
         formattedRemaining={formattedRemaining}
         onStayLoggedIn={resetIdleTimer}
         onLogoutNow={handleIdleAutoLogout}
+        onEnterHibernation={() => {
+          resetIdleTimer();
+          setIsHibernationOpen(true);
+        }}
       />
 
       {/* Tigrinya Audio Onboarding Modal */}
@@ -950,11 +1052,12 @@ export default function App() {
         onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
         onOpenPaymentModal={() => setActiveTab('payment')}
         onOpenManagement={(sec) => setActiveTab(sec === 'payments' ? 'payment-management' : sec === 'customers' ? 'customer-management' : 'user-management')}
-        onPlayWelcomeAudio={() => triggerWelcomeAudioGreeting(true)}
         onOpenAuthModal={(mode) => {
           setAuthMode(mode);
           setIsAuthModalOpen(true);
         }}
+        onSaveInsight={handleSaveInsight}
+        onNavigateTab={setActiveTab}
       />
 
       {/* App Security & Vault Management Center Modal */}
@@ -970,6 +1073,15 @@ export default function App() {
         isOpen={isPwaModalOpen}
         onClose={() => setIsPwaModalOpen(false)}
         onOpenAuthModal={(m) => handleOpenAuthModal(m)}
+        onOpenAndroidInterface={() => setActiveTab('android-app')}
+        onOpenHibernation={() => setIsHibernationOpen(true)}
+      />
+
+      {/* Sovereign Axumite AI Fullscreen Hibernation Standby Shield */}
+      <AxumiteHibernationScreen
+        isOpen={isHibernationOpen}
+        onWakeUp={() => setIsHibernationOpen(false)}
+        reason="manual"
       />
 
       {/* Brand Hero Manifesto Modal */}
@@ -988,13 +1100,6 @@ export default function App() {
         onOpenUserModal={() => setIsUserModalOpen(true)}
         onOpenDrawer={() => setIsDrawerOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
-      />
-
-      {/* Tigrinya Welcome Audio Greeting Toast & Voice Synthesizer */}
-      <WelcomeAudioGreetingToast
-        user={user}
-        isVisible={isWelcomeAudioToastVisible && !!user?.isLoggedIn}
-        onClose={() => setIsWelcomeAudioToastVisible(false)}
       />
 
       {/* Push Notification Immediate Toast */}
@@ -1112,66 +1217,6 @@ export default function App() {
         lastFeedback={lastActionFeedback}
         onClearFeedback={clearFeedback}
       />
-
-      {/* Floating Sovereign Voice Command Activator Button with Hands-Free Secondary Toggle */}
-      <div className="fixed bottom-20 right-4 sm:right-6 z-30 pointer-events-auto flex items-center space-x-1.5">
-        {/* Secondary Hands-Free Always-Listening Quick Toggle Button */}
-        <button
-          type="button"
-          id="axumite-floating-always-listening-toggle"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleAlwaysListening();
-          }}
-          className={`h-10 px-2.5 rounded-full border text-[10px] font-black uppercase tracking-wider flex items-center space-x-1.5 transition-all shadow-lg active:scale-95 cursor-pointer backdrop-blur-md ${
-            isAlwaysListening
-              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-              : 'bg-[#130F1F]/90 text-amber-300/80 border-amber-500/50 hover:border-amber-400 hover:text-white'
-          }`}
-          title={
-            isAlwaysListening
-              ? (language === 'ti' ? 'Hands-Free ንቑሕ ኣሎ (ጠውቕ ንምቁራጽ)' : 'Always-Listening Active (Click to disable)')
-              : (language === 'ti' ? 'Hands-Free ኩሉ ግዜ ሰማዒ ንምብራህ ጠውቕ' : 'Enable Always-Listening Hands-Free Mode')
-          }
-        >
-          <span className={`w-2 h-2 rounded-full ${isAlwaysListening ? 'bg-emerald-400 animate-ping' : 'bg-amber-500/50'}`} />
-          <Radio className={`w-3.5 h-3.5 ${isAlwaysListening ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
-          <span className="text-[10px] font-bold">
-            {isAlwaysListening ? (language === 'ti' ? 'ንቑሕ' : 'LIVE') : (language === 'ti' ? 'ሰማዒ' : 'AUTO')}
-          </span>
-        </button>
-
-        {/* Main Floating Voice HUD Button */}
-        <button
-          type="button"
-          id="axumite-floating-voice-btn"
-          onClick={() => {
-            playVoiceTriggerChime();
-            setIsVoiceOverlayOpen(true);
-          }}
-          className={`group relative flex items-center justify-center w-12 h-12 sm:w-13 sm:h-13 rounded-full text-slate-950 shadow-[0_4px_20px_rgba(245,158,11,0.4)] border-2 border-amber-300 hover:scale-105 active:scale-95 transition-all cursor-pointer ${
-            isAlwaysListening
-              ? 'bg-gradient-to-tr from-emerald-500 via-amber-400 to-amber-300 ring-2 ring-emerald-400'
-              : 'bg-gradient-to-tr from-amber-600 via-amber-500 to-amber-400'
-          }`}
-          title="Voice Command Overlay (Click or press 'v')"
-          aria-label="Open Voice Commands HUD"
-        >
-          {/* Subtle Outer Pulsing Wave Ring */}
-          <span
-            className={`absolute inset-0 rounded-full border pointer-events-none ${
-              isAlwaysListening ? 'border-emerald-400 animate-ping opacity-80' : 'border-amber-400 animate-ping opacity-60'
-            }`}
-          />
-          
-          <Mic className="w-6 h-6 text-slate-950 group-hover:scale-110 transition-transform" />
-
-          {/* Floating Hover Tooltip */}
-          <span className="absolute right-full mr-3 px-2.5 py-1 rounded-xl bg-[#14121F] border border-amber-500/50 text-[#F3E5AB] text-[11px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
-            🎙️ {isAlwaysListening ? 'Always-Listening Active' : 'Voice Commands'}
-          </span>
-        </button>
-      </div>
 
     </div>
   );

@@ -65,8 +65,10 @@ export const WrittenChatModal: React.FC<WrittenChatModalProps> = ({
         };
 
         recog.onerror = (e: any) => {
-          console.warn('Speech recognition error:', e);
           setIsListening(false);
+          if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed') {
+            setIsTypingMode(true);
+          }
         };
 
         recog.onend = () => {
@@ -111,9 +113,9 @@ export const WrittenChatModal: React.FC<WrittenChatModalProps> = ({
         setInputText('');
         recognitionRef.current.start();
         setIsListening(true);
-      } catch (err) {
-        console.error('Speech start error:', err);
+      } catch {
         setIsListening(false);
+        setIsTypingMode(true);
       }
     }
   };

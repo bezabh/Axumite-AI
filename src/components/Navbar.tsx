@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AppTab, UserProfile } from '../types';
-import { Globe, Check, Menu, Sparkles, Bell, Mic, Radio } from 'lucide-react';
+import { Globe, Check, Menu, Sparkles, Bell, Mic, Radio, Gift } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { Axumite3DLogo } from './Axumite3DLogo';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -66,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             <div id="axumite-logo-brand" className="flex items-center space-x-3 cursor-pointer group" onClick={() => setActiveTab('premiere')}>
-              <div className="relative w-10 h-10 border border-[#C5A059]/60 p-0.5 rounded-xl flex items-center justify-center bg-[#0F0E13] group-hover:scale-105 transition-transform duration-300 shadow-md">
+              <div className="relative w-11 h-11 border border-[#C5A059]/60 p-0.5 rounded-xl flex items-center justify-center bg-[#0F0E13] group-hover:scale-105 transition-transform duration-300 shadow-md">
                 <img 
                   src={logoSrc} 
                   alt="Emblem" 
@@ -76,11 +77,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="absolute inset-0 stela-glow opacity-60 group-hover:opacity-100 transition-opacity rounded-xl" />
               </div>
               <div className="flex flex-col">
-                <span className="font-cinzel text-base sm:text-lg font-black tracking-wider metallic-gold-shimmer leading-none">
-                  AXUMITE AI
-                </span>
+                <div className="flex items-center space-x-1">
+                  <span 
+                    className="font-black text-sm sm:text-base tracking-tight"
+                    style={{
+                      background: 'linear-gradient(90deg, #A855F7 0%, #EC4899 40%, #F97316 70%, #F59E0B 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    ኣክሱማይት
+                  </span>
+                  <span 
+                    className="font-serif font-black text-xs sm:text-sm tracking-wider"
+                    style={{
+                      background: 'linear-gradient(180deg, #FFF6BD 0%, #EAB308 60%, #92400E 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    AI
+                  </span>
+                </div>
                 <span className="text-[9px] uppercase tracking-widest text-slate-400 font-mono mt-0.5 font-medium">
-                  {language === 'ti' ? 'ልዑላዊ AI መድረኽ' : 'Sovereign Heritage Intelligence'}
+                  {language === 'ti' ? 'ልዑላዊ AI መድረኽ' : 'Sovereign Intelligence'}
                 </span>
               </div>
             </div>
@@ -160,6 +180,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
+            {/* Rewards & Cash Hub Quick Action */}
+            <button
+              type="button"
+              id="axumite-nav-rewards-btn"
+              onClick={() => setActiveTab('rewards')}
+              className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-sm border text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer shadow-md ${
+                activeTab === 'rewards'
+                  ? 'bg-gradient-to-r from-[#8E6D28] via-[#E1C47D] to-[#C5A059] text-black border-[#F3E5AB] stela-glow'
+                  : 'bg-[#120E1C] border-amber-500/50 hover:border-amber-400 text-amber-300'
+              }`}
+              title={language === 'ti' ? 'ዓስብን ቦነስን ($10 Payout)' : 'Rewards & Cash Bonuses'}
+            >
+              <Gift className="w-3.5 h-3.5 text-amber-400" />
+              <span>{language === 'ti' ? 'ዓስቢ ($10)' : 'Rewards ($10)'}</span>
+            </button>
+
             {/* Management Hub Quick Action */}
             <button
               type="button"
@@ -184,15 +220,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title={t.selectLanguage}
               >
                 <Globe className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                <span>{language === 'ti' ? 'ትግርኛ' : 'English'}</span>
+                <span>
+                  {language === 'ti' || language === 'ti_tg'
+                    ? 'ትግርኛ'
+                    : language === 'de'
+                    ? 'Deutsch'
+                    : 'English'}
+                </span>
               </button>
 
               {/* Language Selector Dropdown Menu */}
               {isLangMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-[#0B0912] border-2 border-[#8E6D28] rounded-xl shadow-2xl p-2 z-50 space-y-1.5 backdrop-blur-xl">
+                <div className="absolute right-0 mt-2 w-52 bg-[#0B0912] border-2 border-[#8E6D28] rounded-xl shadow-2xl p-2 z-50 space-y-1 backdrop-blur-xl">
                   <div className="text-[9px] uppercase tracking-widest text-[#C5A059] font-mono px-2 py-1 border-b border-[#8E6D28]/30 font-bold">
                     {t.selectLanguage}
                   </div>
+
+                  {/* Unified Tigrinya */}
                   <button
                     type="button"
                     onClick={() => {
@@ -200,18 +244,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsLangMenuOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                      language === 'ti'
+                      language === 'ti' || language === 'ti_tg'
                         ? 'bg-amber-500/25 text-[#F3E5AB] border border-amber-400/60 shadow-lg'
                         : 'text-gray-300 hover:bg-[#181326] hover:text-white'
                     }`}
                   >
                     <span className="flex items-center space-x-2">
-                      <Globe className="w-3.5 h-3.5 text-amber-400" />
-                      <span>ትግርኛ (Tigrinya)</span>
+                      <span className="text-sm">📜</span>
+                      <div className="text-left">
+                        <div>ትግርኛ</div>
+                        <div className="text-[9.5px] text-amber-300/80 font-normal">Tigrinya</div>
+                      </div>
                     </span>
-                    {language === 'ti' && <Check className="w-4 h-4 text-amber-400" />}
+                    {(language === 'ti' || language === 'ti_tg') && <Check className="w-4 h-4 text-amber-400" />}
                   </button>
 
+                  {/* English */}
                   <button
                     type="button"
                     onClick={() => {
@@ -225,10 +273,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }`}
                   >
                     <span className="flex items-center space-x-2">
-                      <Globe className="w-3.5 h-3.5 text-sky-400" />
-                      <span>English</span>
+                      <span className="text-sm">🇬🇧</span>
+                      <div className="text-left">
+                        <div>English</div>
+                        <div className="text-[9.5px] text-sky-300/80 font-normal">International English</div>
+                      </div>
                     </span>
                     {language === 'en' && <Check className="w-4 h-4 text-amber-400" />}
+                  </button>
+
+                  {/* German */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLanguage('de');
+                      setIsLangMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                      language === 'de'
+                        ? 'bg-amber-500/25 text-[#F3E5AB] border border-amber-400/60 shadow-lg'
+                        : 'text-gray-300 hover:bg-[#181326] hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center space-x-2">
+                      <span className="text-sm">🇩🇪</span>
+                      <div className="text-left">
+                        <div>Deutsch</div>
+                        <div className="text-[9.5px] text-emerald-300/80 font-normal">German</div>
+                      </div>
+                    </span>
+                    {language === 'de' && <Check className="w-4 h-4 text-amber-400" />}
                   </button>
                 </div>
               )}

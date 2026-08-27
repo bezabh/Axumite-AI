@@ -202,9 +202,9 @@ const JOB_LOCATION_SUGGESTIONS = [
   { id: 'bahirdar', label: 'Bahir Dar (Ethiopia)', labelTi: 'ባህር ዳር', region: 'ethiopia' },
   { id: 'hawassa', label: 'Hawassa (Ethiopia)', labelTi: 'ሃዋሳ', region: 'ethiopia' },
 
-  // Eritrea
-  { id: 'asmara', label: 'Asmara (Eritrea)', labelTi: 'ኣስመራ (ኤርትራ)', region: 'eritrea' },
-  { id: 'keren', label: 'Keren (Eritrea)', labelTi: 'ከረን (ኤርትራ)', region: 'eritrea' },
+  // Eritrea & Regional
+  { id: 'asmara', label: 'Asmara (Regional)', labelTi: 'ኣስመራ (ትግራይ/ቀጠና)', region: 'eritrea' },
+  { id: 'keren', label: 'Keren (Regional)', labelTi: 'ከረን (ትግራይ/ቀጠና)', region: 'eritrea' },
 
   // Middle East & Gulf
   { id: 'dubai', label: 'Dubai (UAE)', labelTi: 'ዱባይ (UAE)', region: 'middle_east' },
@@ -423,11 +423,11 @@ const SAMPLE_JOB_DATABASE: JobListing[] = [
     category: 'Doctor',
     categoryTi: 'ሕክምናን ጥዕናን',
     organization: 'Central Regional Health Services',
-    location: 'Asmara, Eritrea',
-    locationTi: 'ኣስመራ፡ ኤርትራ',
+    location: 'Asmara, Regional',
+    locationTi: 'ኣስመራ፡ ትግራይ/ቀጠና',
     region: 'eritrea',
-    salary: '25,000 - 35,000 ERN / mo',
-    salaryTi: '25,000 - 35,000 ናቕፋ / ወርሒ',
+    salary: '25,000 - 35,000 ETB / mo',
+    salaryTi: '25,000 - 35,000 ብር / ወርሒ',
     type: 'Full-time',
     typeTi: 'ምሉእ ግዜ',
     description: 'Conducting patient diagnoses, preventive medical counseling, outpatient consultations, and emergency health treatments.',
@@ -754,7 +754,7 @@ export const JobSearchModal: React.FC<JobSearchModalProps> = ({
         ? `📄 **ሞያዊ CV (Resume) - ${name}**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 **ዒላማ ሞያ**: ${role}
-📍 **ቦታ**: ኢትዮጵያ / ትግራይ / ኤርትራ / ዲያስፖራ
+📍 **ቦታ**: ኢትዮጵያ / ትግራይ / ዲያስፖራ
 📧 **ኢመይል**: ${name.toLowerCase().replace(/\s+/g, '')}@gmail.com | 📱 +251 91 123 4567
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -869,7 +869,7 @@ Results-driven, adaptable, and dedicated professional with proven expertise in $
               {language === 'ti' ? 'ስራሕ ድለ' : 'Job Search'}
             </h2>
             <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-              {language === 'ti' ? 'ትግራይ • ኢትዮጵያ • ኤርትራ • ዓለምለኸ' : 'Tigray • Ethiopia • Eritrea • Global'}
+              {language === 'ti' ? 'ትግራይ • ኢትዮጵያ • ዓለምለኸ' : 'Tigray • Ethiopia • Regional • Global'}
             </div>
           </div>
 
@@ -992,8 +992,8 @@ Results-driven, adaptable, and dedicated professional with proven expertise in $
               {/* Paragraph text */}
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto leading-relaxed">
                 {language === 'ti' 
-                  ? "እንታይ ዓይነት ስራሕን ኣብየናይ ቦታን (ትግራይ፣ ኢትዮጵያ፣ ኤርትራ ወይ ዲያስፖራ) ከም እትደሊ ን 'ኣክሱማይት AI' ንገሮ። ንሱ ድማ በቲ ዓሚቝ ናይ ምድላይ ክእለቱ ተጠቒሙ፡ ንዓኻ ዝሰማማዕን ኣብ ከባቢኻ ዝርከብን ክፍት ናይ ስራሕ ዕድላት ከናድየልካ እዩ።"
-                  : "Tell 'Axumite AI' what type of work and location (Tigray, Ethiopia, Eritrea, or Diaspora) you are looking for. Powered by intelligent search, it will locate matching job openings and vacancies."}
+                  ? "እንታይ ዓይነት ስራሕን ኣብየናይ ቦታን (ትግራይ፣ ኢትዮጵያ ወይ ዲያስፖራ) ከም እትደሊ ን 'ኣክሱማይት AI' ንገሮ። ንሱ ድማ በቲ ዓሚቝ ናይ ምድላይ ክእለቱ ተጠቒሙ፡ ንዓኻ ዝሰማማዕን ኣብ ከባቢኻ ዝርከብን ክፍት ናይ ስራሕ ዕድላት ከናድየልካ እዩ።"
+                  : "Tell 'Axumite AI' what type of work and location (Tigray, Ethiopia, or Diaspora) you are looking for. Powered by intelligent search, it will locate matching job openings and vacancies."}
               </p>
             </div>
 
@@ -1091,7 +1091,7 @@ Results-driven, adaptable, and dedicated professional with proven expertise in $
                         : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    {language === 'ti' ? 'ኤርትራ' : 'Eritrea'}
+                    {language === 'ti' ? 'ትግራይ (ቀጠና)' : 'Regional'}
                   </button>
                 </div>
               </div>
@@ -1540,7 +1540,7 @@ Results-driven, adaptable, and dedicated professional with proven expertise in $
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300">
                     {language === 'ti' 
-                      ? 'ንትግራይ፣ ኢትዮጵያ፣ ኤርትራ፣ ሕቡራት መንግስታት (UN/NGO) ከምኡ’ውን ዓለምለኸ ሪሞት ስራሓት ዝኸውን ዝተረጋገጹ ናይ ስራሕ መርበባት ሓበሬታ።'
+                      ? 'ንትግራይ፣ ኢትዮጵያ፣ ሕቡራት መንግስታት (UN/NGO) ከምኡ’ውን ዓለምለኸ ሪሞት ስራሓት ዝኸውን ዝተረጋገጹ ናይ ስራሕ መርበባት ሓበሬታ።'
                       : 'Curated direct links to verified job boards across Tigray, Ethiopia, NGO/Humanitarian platforms, and global remote marketplaces.'}
                   </p>
                 </div>
@@ -1692,7 +1692,7 @@ Results-driven, adaptable, and dedicated professional with proven expertise in $
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {language === 'ti' 
-                      ? 'ንትግራይ፣ ኢትዮጵያ፣ ኤርትራ ወይ ዓለምለኸ ኩባንያታት ዝኸውን ዓለምለኸ ደረጃ ዘለዎ CV ብትግርኛን እንግሊዝን ብቕጽበት ኣዳልዉ።' 
+                      ? 'ንትግራይ፣ ኢትዮጵያ ወይ ዓለምለኸ ኩባንያታት ዝኸውን ዓለምለኸ ደረጃ ዘለዎ CV ብትግርኛን እንግሊዝን ብቕጽበት ኣዳልዉ።' 
                       : 'Generate a polished bilingual resume tailored for local and international job applications.'}
                   </p>
                 </div>

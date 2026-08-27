@@ -8,7 +8,7 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "email": { "type": "string", "format": "email" },
-        "role": { "type": "string", "enum": ["Creator", "Guest", "Admin", "User", "Axumite Sovereign Scholar", "ኤርትራዊ AI Pro", "Free Member"] },
+        "role": { "type": "string", "enum": ["Creator", "Guest", "Admin", "User", "Axumite Sovereign Scholar", "ኣክሱማይት AI Pro", "Free Member"] },
         "phoneNumber": { "type": "string" },
         "isEmailVerified": { "type": "boolean" },
         "isPhoneVerified": { "type": "boolean" },

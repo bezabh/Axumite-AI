@@ -4,7 +4,7 @@ import {
   Users, UserPlus, Search, Filter, ShieldCheck, ShieldAlert, CheckCircle2, 
   XCircle, MoreVertical, Edit3, Trash2, Key, Download, RefreshCw, 
   Smartphone, Mail, MapPin, Coins, ArrowUpDown, Lock, UserCheck, Eye,
-  Sliders, Sparkles, Check, X, Shield, Cpu, Database, Server, Crown
+  Sliders, Sparkles, Check, X, Shield, Cpu, Database, Server, Crown, FileText
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { 
@@ -13,11 +13,12 @@ import {
   getUserEffectivePrivileges, 
   isAdminOrCreator 
 } from '../lib/permissions';
+import { exportUsersToCSV, exportUsersToPDF } from '../utils/adminDataExport';
 
 const INITIAL_MANAGED_USERS: ManagedUser[] = [
   {
     id: 'usr-axm-000',
-    name: 'በዛብህ ኣብርሃ ወልደገብርኤል',
+    name: 'Becky Love',
     email: 'beckylove2004@gmail.com',
     phoneNumber: '+49 152 14451691',
     country: 'Germany (Regensburg, Bavaria)',
@@ -69,7 +70,7 @@ const INITIAL_MANAGED_USERS: ManagedUser[] = [
     email: 'bereket.y@diaspora.org',
     phoneNumber: '+44 7911 123456',
     country: 'United Kingdom (London)',
-    role: 'ኤርትራዊ AI Pro',
+    role: 'ኣክሱማይት AI Pro',
     status: 'Active',
     tokensUsed: 31200,
     tokensQuota: 50000,
@@ -85,7 +86,7 @@ const INITIAL_MANAGED_USERS: ManagedUser[] = [
     email: 'helen.m@stockholm-tech.se',
     phoneNumber: '+46 70 123 4567',
     country: 'Sweden (Stockholm)',
-    role: 'ኤርትራዊ AI Pro',
+    role: 'ኣክሱማይት AI Pro',
     status: 'Active',
     tokensUsed: 14200,
     tokensQuota: 50000,
@@ -378,35 +379,20 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   };
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Country', 'Role', 'Status', 'Tokens Used', 'Tokens Quota', 'Joined Date'];
-    const rows = users.map(u => [
-      u.id,
-      `"${u.name}"`,
-      u.email,
-      `"${u.phoneNumber}"`,
-      `"${u.country}"`,
-      `"${u.role}"`,
-      u.status,
-      u.tokensUsed,
-      u.tokensQuota,
-      u.joinedDate
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `axumite_users_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportUsersToCSV(users, currentUser);
     triggerNotification('User directory exported as CSV.');
+  };
+
+  const handleExportPDF = () => {
+    exportUsersToPDF(users, currentUser);
+    triggerNotification('User directory exported as PDF.');
   };
 
   // Stats calculation
   const totalUsersCount = users.length;
   const activeUsersCount = users.filter(u => u.status === 'Active').length;
   const adminUsersCount = users.filter(u => u.role === 'Admin' || u.role === 'Creator').length;
-  const proUsersCount = users.filter(u => u.role === 'ኤርትራዊ AI Pro' || u.role === 'Axumite Sovereign Scholar').length;
+  const proUsersCount = users.filter(u => u.role === 'ኣክሱማይት AI Pro' || u.role === 'Axumite Sovereign Scholar').length;
   const totalTokensAllocated = users.reduce((acc, u) => acc + u.tokensQuota, 0);
 
   const allPrivilegeKeys = Object.keys(PRIVILEGE_METADATA) as (keyof UserPrivileges)[];
@@ -440,14 +426,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
             </p>
           </div>
           
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-[#8E6D28]/40 hover:border-[#C5A059] text-[#F3E5AB] text-xs font-bold rounded-xl transition-all flex items-center space-x-2 cursor-pointer shadow-md"
-              title="Export User List"
+              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-purple-500/40 hover:border-purple-400 text-purple-200 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-md active:scale-95"
+              title="Export User List as CSV Spreadsheet"
             >
-              <Download className="w-3.5 h-3.5 text-[#E1C47D]" />
+              <Download className="w-3.5 h-3.5 text-purple-400" />
               <span>Export CSV</span>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-amber-500/40 hover:border-amber-400 text-[#F3E5AB] text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-md active:scale-95"
+              title="Export User Activity Report as Official PDF"
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-400" />
+              <span>Export PDF</span>
             </button>
             <button
               onClick={handleOpenAdd}
@@ -573,7 +567,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                   <option value="Creator" className="bg-[#120F1E]">Creator (Super Admin)</option>
                   <option value="Admin" className="bg-[#120F1E]">Admin</option>
                   <option value="Axumite Sovereign Scholar" className="bg-[#120F1E]">Sovereign Scholar</option>
-                  <option value="ኤርትራዊ AI Pro" className="bg-[#120F1E]">ኤርትራዊ AI Pro</option>
+                  <option value="ኣክሱማይት AI Pro" className="bg-[#120F1E]">ኣክሱማይት AI Pro</option>
                   <option value="Free Member" className="bg-[#120F1E]">Free Member</option>
                 </select>
               </div>
@@ -675,7 +669,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                                 ? 'bg-purple-900/30 border-purple-500/40 text-purple-300'
                                 : u.role === 'Axumite Sovereign Scholar'
                                 ? 'bg-amber-900/30 border-amber-500/50 text-[#F3E5AB]'
-                                : u.role === 'ኤርትራዊ AI Pro'
+                                : u.role === 'ኣክሱማይት AI Pro'
                                 ? 'bg-blue-900/30 border-blue-500/40 text-blue-300'
                                 : 'bg-slate-800/50 border-slate-700 text-slate-300'
                             }`}>
@@ -833,7 +827,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                         <div className="font-bold text-slate-100">{meta.label}</div>
                         <div className="text-[10px] text-slate-400">{meta.description}</div>
                       </td>
-                      {(['Creator', 'Admin', 'Axumite Sovereign Scholar', 'ኤርትራዊ AI Pro', 'Free Member', 'Guest'] as UserRole[]).map((role) => {
+                      {(['Creator', 'Admin', 'Axumite Sovereign Scholar', 'ኣክሱማይት AI Pro', 'Free Member', 'Guest'] as UserRole[]).map((role) => {
                         const isGranted = ROLE_DEFAULT_PRIVILEGES[role]?.[key];
                         return (
                           <td key={role} className="py-2.5 px-2 text-center">
@@ -909,7 +903,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     <option value="Creator">👑 Creator (Super Admin)</option>
                     <option value="Admin">🛡️ Admin (Full Access)</option>
                     <option value="Axumite Sovereign Scholar">📜 Axumite Sovereign Scholar</option>
-                    <option value="ኤርትራዊ AI Pro">⭐ ኤርትራዊ AI Pro</option>
+                    <option value="ኣክሱማይት AI Pro">⭐ ኣክሱማይት AI Pro</option>
                     <option value="Free Member">👤 Free Member</option>
                     <option value="Guest">🌐 Guest</option>
                     <option value="Suspended">🔒 Suspended</option>
@@ -1199,7 +1193,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                     className="w-full bg-[#151226] border border-[#8E6D28]/40 focus:border-[#C5A059] rounded-xl p-2.5 text-[#F3E5AB] font-bold focus:outline-none"
                   >
                     <option value="Free Member">Free Member</option>
-                    <option value="ኤርትራዊ AI Pro">ኤርትራዊ AI Pro</option>
+                    <option value="ኣክሱማይት AI Pro">ኣክሱማይት AI Pro</option>
                     <option value="Axumite Sovereign Scholar">Axumite Scholar</option>
                     <option value="Admin">Admin</option>
                   </select>

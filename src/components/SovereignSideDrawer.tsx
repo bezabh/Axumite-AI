@@ -2,12 +2,13 @@ import React from 'react';
 import { 
   X, Sparkles, MessageSquare, Languages, Mic, Briefcase, FileText, 
   Car, Clock, User, ShieldCheck, ChevronRight, LayoutDashboard, 
-  CreditCard, BookmarkCheck, Globe, HelpCircle, Bot, GraduationCap, Palette, Bell, Video,
-  Building2, Landmark, TrendingUp, Compass, Heart, HardDrive, Database
+  BookmarkCheck, Globe, HelpCircle, Bot, GraduationCap, Palette, Bell, Video,
+  Building2, Landmark, TrendingUp, Compass, Heart, Database, Gift, Moon
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { AppTab, UserProfile } from '../types';
 import { isAdminOrCreator } from '../lib/permissions';
+import { Axumite3DLogo } from './Axumite3DLogo';
 
 interface SovereignSideDrawerProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ interface SovereignSideDrawerProps {
   onOpenVideoTranslator?: () => void;
   onOpenVoiceOverlay?: () => void;
   onOpenFileVault?: () => void;
+  onOpenHibernation?: () => void;
 }
 
 export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
@@ -49,8 +51,10 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
   onOpenVideoTranslator,
   onOpenVoiceOverlay,
   onOpenFileVault,
+  onOpenHibernation,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const isTigrinya = language === 'ti' || language === 'ti_tg';
 
   if (!isOpen) return null;
 
@@ -77,17 +81,10 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
         >
           
           {/* Top Header */}
-          <div className="p-5 sm:p-6 pb-3 flex items-center justify-between">
-            {/* Title: ኣክሱማይት AI */}
-            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => handleSelectTool(() => onNavigateTab('premiere'))}>
-              <h2 className="text-2xl sm:text-3xl font-black font-cinzel tracking-tight flex items-center space-x-1.5">
-                <span className="bg-gradient-to-r from-[#C084FC] via-[#F472B6] to-[#F59E0B] text-transparent bg-clip-text font-black">
-                  ኣክሱማይት
-                </span>
-                <span className="text-[#F59E0B] font-bold">
-                  AI
-                </span>
-              </h2>
+          <div className="p-4 sm:p-5 pb-3 flex items-center justify-between border-b border-amber-500/20 bg-[#090A12]">
+            {/* Title: ኣክሱማይት AI with 3D styling */}
+            <div className="cursor-pointer" onClick={() => handleSelectTool(() => onNavigateTab('premiere'))}>
+              <Axumite3DLogo size="xs" showObeliskMedallion={true} showReflection={false} />
             </div>
 
             {/* Circular Close Button */}
@@ -154,6 +151,7 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                     <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
                   </button>
                 )}
+
 
                 {/* 1. Chat */}
                 <button
@@ -242,11 +240,33 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                     </div>
                     <div>
                       <div className="text-sm font-bold text-amber-200 group-hover:text-white transition-colors flex items-center space-x-1.5">
-                        <span>{language === 'ti' ? 'ባህላዊ ውርሻ ትግራይን ኤርትራን' : 'Tigray & Eritrea Cultural AI'}</span>
+                        <span>{language === 'ti' ? 'ባህላዊ ውርሻ ትግራይ' : 'Tigray Cultural AI'}</span>
                         <span className="text-[9px] bg-emerald-500/30 text-emerald-300 font-mono px-1 rounded">HERITAGE</span>
                       </div>
                       <div className="text-[10.5px] text-amber-300/70">
                         {language === 'ti' ? 'ቅርሲታት፡ ምስላታት፡ ባህላዊ ሙዚቃን ዛንታን' : 'Monuments, Proverbs, Buna Ritual, Map & Archive'}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
+                {/* 2.58 Rewards & Cash Bonuses ($10 Payout Hub) */}
+                <button
+                  onClick={() => handleSelectTool(() => onNavigateTab('rewards'))}
+                  className="w-full bg-gradient-to-r from-[#1A162B] via-[#261E3D] to-[#1A162B] hover:from-[#241B3E] hover:to-[#241B3E] border border-amber-500/50 hover:border-amber-400 rounded-2xl p-3 flex items-center justify-between transition-all group cursor-pointer shadow-md"
+                >
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/30 to-[#352554] border border-[#E1C47D]/60 text-[#E1C47D] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
+                      <Gift className="w-5 h-5 text-[#E1C47D]" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-amber-200 group-hover:text-white transition-colors flex items-center space-x-1.5">
+                        <span>{language === 'ti' ? 'ዓስብን ቦነስን (Rewards & Cash)' : 'Rewards & Cash Bonuses'}</span>
+                        <span className="text-[9px] bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-black font-mono px-1.5 py-0.2 rounded-full shadow-xs">$10</span>
+                      </div>
+                      <div className="text-[10.5px] text-amber-300/70">
+                        {language === 'ti' ? 'ዕማማት ፈጽም እሞ ገንዘብ ረከብ (Payout)' : 'Complete tasks & earn money with $10 payout'}
                       </div>
                     </div>
                   </div>
@@ -378,30 +398,6 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
                 </button>
-
-                {/* 8. User Cloud File Storage & Vault */}
-                {onOpenFileVault && (
-                  <button
-                    onClick={() => handleSelectTool(onOpenFileVault)}
-                    className="w-full bg-gradient-to-r from-blue-950/40 via-[#121A2E] to-blue-900/30 hover:from-blue-900/50 hover:to-blue-800/40 border border-blue-500/50 hover:border-blue-400 rounded-2xl p-3 flex items-center justify-between transition-all group cursor-pointer shadow-md"
-                  >
-                    <div className="flex items-center space-x-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-blue-950 border border-blue-400/60 text-blue-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
-                        <HardDrive className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-blue-100 group-hover:text-white transition-colors flex items-center space-x-1.5">
-                          <span>{language === 'ti' ? 'ናይ ፋይል ክላውድ መኽዘን' : 'Cloud File Vault & Storage'}</span>
-                          <span className="text-[9px] bg-blue-500/30 text-blue-200 font-mono px-1 rounded">CLOUD</span>
-                        </div>
-                        <div className="text-[10.5px] text-blue-300/70">
-                          {language === 'ti' ? 'ሰነዳት፣ ስእልታት፣ ግእዝ ጽሑፋት ምዕቃብ' : 'Upload, view, search & manage private files'}
-                        </div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                )}
               </div>
             </div>
 
@@ -492,6 +488,29 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors" />
                 </button>
+
+                {/* 4. Sovereign Hibernation Standby Mode */}
+                {onOpenHibernation && (
+                  <button
+                    onClick={() => handleSelectTool(onOpenHibernation)}
+                    className="w-full bg-[#171226]/90 hover:bg-[#231A3B] border border-amber-500/40 hover:border-amber-400 rounded-2xl p-3 flex items-center justify-between transition-all group cursor-pointer shadow-sm"
+                  >
+                    <div className="flex items-center space-x-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
+                        <Moon className="w-5 h-5" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-sm font-bold text-slate-100 group-hover:text-[#F3E5AB] transition-colors">
+                          ዕረፍቲ / ድቃስ (Hibernation Standby)
+                        </div>
+                        <div className="text-[10px] text-amber-300/80">
+                          {language === 'ti' ? 'ጸዓት ምዕቃብን ናይ ድቃስ ስርዓትን' : 'Energy saving & sovereign breathing emblem'}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -502,27 +521,6 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
               </div>
 
               <div className="space-y-2">
-                {/* Payment & Subscriptions Hub */}
-                <button
-                  onClick={() => handleSelectTool(() => onNavigateTab('payment'))}
-                  className="w-full bg-[#1A1608]/90 hover:bg-[#2A220F] border border-[#8E6D28]/60 hover:border-[#C5A059] rounded-2xl p-3 flex items-center justify-between transition-all group cursor-pointer shadow-md"
-                >
-                  <div className="flex items-center space-x-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-amber-950/70 border border-[#8E6D28] text-[#F3E5AB] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
-                      <CreditCard className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div className="text-left">
-                      <div className="text-sm font-bold text-[#F3E5AB] group-hover:text-white transition-colors">
-                        {language === 'ti' ? 'ክፍሊትን ኣባልነትን (Payment & Subscriptions)' : 'Payment & Subscriptions'}
-                      </div>
-                      <div className="text-[10px] text-amber-300/80">
-                        {language === 'ti' ? 'Telebirr, CBE Birr, Apple/Google IAP, ዓለምለኸ ካርድ' : 'Telebirr, CBE, Apple/Google IAP, Cards'}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
-                </button>
-
                 {/* Management Suite (Admin & Creator) */}
                 {(isAdminOrCreator(user) || user?.role === 'Admin' || user?.role === 'Creator') && (
                   <button
@@ -565,26 +563,66 @@ export const SovereignSideDrawer: React.FC<SovereignSideDrawerProps> = ({
                 </button>
 
                 {/* Language Selector */}
-                <div className="bg-[#131624]/90 border border-slate-800/80 rounded-2xl p-3 flex items-center justify-between">
-                  <div className="flex items-center space-x-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 text-sky-400 flex items-center justify-center shrink-0">
-                      <Globe className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-100">
-                        {language === 'ti' ? 'ቋንቋ (Language)' : 'Language'}
+                <div className="bg-[#131624]/90 border border-slate-800/80 rounded-2xl p-3 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 text-amber-400 flex items-center justify-center shrink-0">
+                        <Globe className="w-5 h-5" />
                       </div>
-                      <div className="text-[11px] text-slate-400">
-                        {language === 'ti' ? 'ትግርኛ (Tigrinya ER)' : 'English (Intl)'}
+                      <div>
+                        <div className="text-sm font-bold text-slate-100">
+                          {isTigrinya ? 'ቋንቋ (Language)' : 'Language Selection'}
+                        </div>
+                        <div className="text-[11px] text-amber-300/80 font-medium">
+                          {language === 'ti' || language === 'ti_tg'
+                            ? 'ትግርኛ (Tigrinya)'
+                            : language === 'de'
+                            ? '🇩🇪 Deutsch'
+                            : '🇬🇧 English (Intl)'}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setLanguage(language === 'ti' ? 'en' : 'ti')}
-                    className="px-3 py-1.5 bg-[#1C1F2E] hover:bg-[#252A3D] border border-[#8E6D28]/50 text-[#F3E5AB] rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    {language === 'ti' ? 'Switch to EN' : 'Switch to ትግርኛ'}
-                  </button>
+
+                  {/* 3-way language selection: Tigrinya, English, Deutsch */}
+                  <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setLanguage('ti')}
+                      className={`px-2 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                        language === 'ti' || language === 'ti_tg'
+                          ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 shadow-sm'
+                          : 'bg-[#181B2A] text-slate-400 hover:text-slate-200 hover:bg-[#202538]'
+                      }`}
+                    >
+                      <span className="text-xs">📜</span>
+                      <span className="truncate">ትግርኛ</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLanguage('en')}
+                      className={`px-2 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                        language === 'en'
+                          ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 shadow-sm'
+                          : 'bg-[#181B2A] text-slate-400 hover:text-slate-200 hover:bg-[#202538]'
+                      }`}
+                    >
+                      <span>🇬🇧</span>
+                      <span className="truncate">English</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLanguage('de')}
+                      className={`px-2 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-1.5 ${
+                        language === 'de'
+                          ? 'bg-amber-500/25 text-amber-200 border border-amber-400/60 shadow-sm'
+                          : 'bg-[#181B2A] text-slate-400 hover:text-slate-200 hover:bg-[#202538]'
+                      }`}
+                    >
+                      <span>🇩🇪</span>
+                      <span className="truncate">Deutsch</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

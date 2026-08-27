@@ -4,7 +4,7 @@ import {
   Menu, Bell, User, Users, ChevronRight, MessageCircle, 
   Briefcase, FileText, Mic, Volume2, Image, Camera, 
   Languages, Shield, Crown, Sparkles, Plus, GraduationCap, Globe, Palette, Video,
-  Building2, Landmark, TrendingUp, Compass, Heart
+  Building2, Landmark, TrendingUp, Compass, Heart, Gift, Coins, Moon
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { TranslationMethodModal } from './TranslationMethodModal';
@@ -17,7 +17,7 @@ import { WrittenTranslationModal } from './WrittenTranslationModal';
 import { WrittenChatModal } from './WrittenChatModal';
 import { ScholarshipModal } from './ScholarshipModal';
 import { JobSearchModal } from './JobSearchModal';
-import { DailyWisdomCard } from './DailyWisdomCard';
+import { CyberHudHeroBanner } from './CyberHudHeroBanner';
 
 interface EritreanPremiereViewProps {
   activeTab: AppTab;
@@ -40,6 +40,7 @@ interface EritreanPremiereViewProps {
   onOpenNotifications?: () => void;
   onOpenVideoTranslator?: () => void;
   onOpenVoiceOverlay?: () => void;
+  onOpenHibernation?: () => void;
 }
 
 export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
@@ -57,8 +58,10 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
   onOpenNotifications,
   onOpenVideoTranslator,
   onOpenVoiceOverlay,
+  onOpenHibernation,
 }) => {
   const { language, setLanguage, toggleLanguage, t } = useLanguage();
+  const isTigrinya = language === 'ti' || language === 'ti_tg';
   const [isTranslationModalOpen, setIsTranslationModalOpen] = useState(false);
   const [isAudioTranslationModalOpen, setIsAudioTranslationModalOpen] = useState(false);
   const [isWrittenTranslationModalOpen, setIsWrittenTranslationModalOpen] = useState(false);
@@ -76,7 +79,7 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
   const displayRole = user.role === 'Guest' 
     ? t.standardUser 
     : user.role 
-      ? (language === 'ti' ? `${user.role} ተጠቃሚ` : `${user.role} User`) 
+      ? (isTigrinya ? `${user.role} ተጠቃሚ` : `${user.role} User`) 
       : t.premiumUser;
 
   const handleOpenSpeechStudio = (mode: 'stt' | 'tts') => {
@@ -89,7 +92,10 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#EBF2FA] via-[#EEF5FC] to-[#E3EDF8] text-[#0F2856] font-sans pb-28 pt-2 px-3 sm:px-4 relative overflow-x-hidden">
+    <div 
+      id="premiere-view-root"
+      className="min-h-screen bg-gradient-to-b from-[#EBF2FA] via-[#EEF5FC] to-[#E3EDF8] text-[#0F2856] font-sans pb-28 pt-2 px-3 sm:px-4 relative overflow-x-hidden"
+    >
       
       {/* Background Soft Glow Ambience */}
       <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none" />
@@ -98,119 +104,23 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
       <div className="max-w-md mx-auto space-y-3.5 relative z-10">
         
         {/* ========================================================================= */}
-        {/* 1. TOP HEADER: MENU - GREETING TITLE - LANGUAGE TOGGLE & NOTIFICATION BELL */}
+        {/* 1. CYBER HUD HERO BANNER (Matches screenshot 1787576634593.png)          */}
         {/* ========================================================================= */}
-        <div className="flex items-center justify-between gap-2 pt-1 pb-1">
-          {/* Hamburger Menu Button */}
-          <button
-            type="button"
-            onClick={onOpenDrawer}
-            className="w-10 h-10 sm:w-11 sm:h-11 bg-white rounded-2xl shadow-xs border border-slate-100 flex items-center justify-center text-slate-700 hover:text-[#194BFB] hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
-            title={language === 'ti' ? 'ናይ መሳርሒታት ዝርዝር (Menu)' : 'Open navigation menu & tools'}
-            aria-label="Open Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Centered Main Question Heading */}
-          <div className="text-center px-1 flex-1">
-            <h1 className="text-[15.5px] sm:text-[17px] font-bold text-[#0F2856] leading-tight tracking-tight">
-              {t.premiereGreetingLine1}
-            </h1>
-            <h2 className="text-[15.5px] sm:text-[17px] font-bold text-[#0F2856] leading-tight tracking-tight">
-              {t.premiereGreetingLine2}
-            </h2>
-          </div>
-
-          {/* Right Header Controls: Language Pill + Notification Bell */}
-          <div className="flex items-center space-x-1.5 shrink-0">
-            {/* Language Switcher Pill Button (Tigrinya / English) */}
-            <button
-              type="button"
-              onClick={toggleLanguage}
-              className={`h-10 px-2.5 rounded-2xl border shadow-xs flex items-center space-x-1 transition-all active:scale-95 cursor-pointer font-bold text-xs ${
-                language === 'ti'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-500 shadow-blue-500/20'
-                  : 'bg-white text-[#194BFB] border-slate-100 hover:bg-slate-50'
-              }`}
-              title={language === 'ti' ? 'Switch to English' : 'ናብ ትግርኛ ቐይር (Switch to Tigrinya)'}
-              aria-label="Language Toggle"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span className="text-[11px] tracking-tight font-extrabold">
-                {language === 'ti' ? 'ትግርኛ' : 'EN'}
-              </span>
-            </button>
-
-            {/* Notification Bell Button */}
-            <button
-              type="button"
-              onClick={onOpenNotifications || onOpenHistory}
-              className="w-10 h-10 sm:w-11 sm:h-11 bg-white rounded-2xl shadow-xs border border-slate-100 flex items-center justify-center text-slate-700 hover:text-[#194BFB] hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 relative group"
-              title={language === 'ti' ? 'ማእከል ምልክታታትን ስኮላርሺፕን (Notifications)' : 'Notifications & Scholarship Alerts'}
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5 group-hover:scale-110 transition-transform text-[#0F2856]" />
-              {unreadNotifCount > 0 ? (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-white shadow-sm animate-pulse">
-                  {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
-                </span>
-              ) : (
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-slate-300 rounded-full ring-2 ring-white" />
-              )}
-            </button>
-          </div>
-        </div>
+        <CyberHudHeroBanner
+          onOpenDrawer={onOpenDrawer}
+          onOpenNotifications={onOpenNotifications || onOpenHistory}
+          onToggleLanguage={toggleLanguage}
+          unreadNotifCount={unreadNotifCount > 0 ? unreadNotifCount : 9}
+        />
 
         {/* ========================================================================= */}
-        {/* 2. TOP USER INFO ROW (2 CARDS)                                            */}
+        {/* 2. CONSOLIDATED USER & AI STATUS ROW (Zero Redundancy)                    */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-2 gap-2.5">
-          {/* Card 1: Your Name */}
+          {/* Card 1: User Profile & Status */}
           <div 
             onClick={onOpenUserModal}
             className="bg-white rounded-2xl p-3 shadow-xs border border-slate-100/90 flex items-center space-x-2.5 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-          >
-            <div className="w-9 h-9 rounded-full bg-[#4834D4]/12 text-[#4834D4] flex items-center justify-center shrink-0">
-              <User className="w-4.5 h-4.5 fill-current" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold text-[#0F2856] block leading-tight">
-                {t.yourNameLabel}
-              </span>
-              <span className="text-xs text-slate-500 font-medium truncate block mt-0.5">
-                {displayName}
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: User Type */}
-          <div 
-            onClick={onOpenPremiumModal || onOpenUserModal}
-            className="bg-white rounded-2xl p-3 shadow-xs border border-slate-100/90 flex items-center space-x-2.5 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-          >
-            <div className="w-9 h-9 rounded-full bg-[#194BFB]/12 text-[#194BFB] flex items-center justify-center shrink-0">
-              <Users className="w-4.5 h-4.5 fill-current" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[11px] font-bold text-[#0F2856] block leading-tight">
-                {t.userTypeLabel}
-              </span>
-              <span className="text-xs font-bold text-[#194BFB] truncate block mt-0.5">
-                {displayRole}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 3. GREETING & AI ASSISTANT ROW (2 CARDS)                                   */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Card 1: Hello, John / Welcome back! */}
-          <div 
-            onClick={onOpenUserModal}
-            className="bg-white rounded-2xl p-2.5 sm:p-3 shadow-xs border border-slate-100/90 flex items-center space-x-2.5 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
           >
             <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-xs shrink-0 bg-slate-100">
               <img 
@@ -221,18 +131,18 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="text-[13px] sm:text-sm font-bold text-[#0F2856] leading-tight truncate">
-                {t.hello}, {firstName}
+                {displayName}
               </h3>
-              <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
-                {t.welcomeBack}
-              </p>
+              <span className="inline-block text-[10.5px] font-bold text-[#194BFB] bg-blue-50 px-1.5 py-0.5 rounded-md mt-0.5 truncate">
+                {displayRole}
+              </span>
             </div>
           </div>
 
-          {/* Card 2: AI Assistant (Royal Blue Quick Chat) */}
+          {/* Card 2: Quick Written AI Chat */}
           <div 
             onClick={() => setIsWrittenChatModalOpen(true)}
-            className="bg-gradient-to-r from-[#194BFB] to-[#143DCB] text-white rounded-2xl p-2.5 sm:p-3 shadow-md shadow-blue-500/20 flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-[0.98] transition-all"
+            className="bg-gradient-to-r from-[#194BFB] to-[#143DCB] text-white rounded-2xl p-3 shadow-md shadow-blue-500/20 flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-[0.98] transition-all"
           >
             <div className="flex items-center space-x-2.5 min-w-0">
               <div className="w-10 h-10 rounded-full overflow-hidden border border-white/80 shadow-xs shrink-0 bg-blue-100">
@@ -246,7 +156,7 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
                 <h3 className="text-[13px] sm:text-sm font-bold text-white leading-tight">
                   {t.aiAssistantCardTitle}
                 </h3>
-                <p className="text-[11px] text-blue-100 leading-tight mt-0.5 truncate">
+                <p className="text-[10.5px] text-blue-100 leading-tight mt-0.5 truncate">
                   {t.chatWithAi}
                 </p>
               </div>
@@ -292,29 +202,16 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
               </div>
             </div>
 
-            {/* Actions: Voice Command HUD & Live Pro */}
-            <div className="flex items-center space-x-1.5 shrink-0">
-              {onOpenVoiceOverlay && (
-                <button
-                  type="button"
-                  onClick={onOpenVoiceOverlay}
-                  className="py-2 px-3 rounded-full bg-[#1A1406] hover:bg-[#2C2108] text-[#ECC665] border border-amber-400/60 font-bold text-xs flex items-center space-x-1 shadow-sm active:scale-95 transition-all cursor-pointer"
-                  title="Open Voice Command HUD Overlay"
-                >
-                  <Mic className="w-3.5 h-3.5 animate-pulse" />
-                  <span>{language === 'ti' ? 'ትእዛዝ' : 'Voice HUD'}</span>
-                </button>
-              )}
-
+            {/* Single Streamlined Voice Launch Action */}
+            <div className="flex items-center shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab('assistance')}
-                className="py-2 px-3 sm:px-3.5 rounded-full bg-[#194BFB] hover:bg-[#133BD0] text-white font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-blue-900/25 active:scale-95 transition-all cursor-pointer border border-blue-400/40"
+                className="py-2 px-4 rounded-full bg-[#194BFB] hover:bg-[#133BD0] text-white font-bold text-xs flex items-center space-x-1.5 shadow-md shadow-blue-900/30 active:scale-95 transition-all cursor-pointer border border-blue-400/40"
               >
+                <Mic className="w-3.5 h-3.5 text-[#ECC665]" />
                 <span>{t.startVoiceBtn}</span>
-                <div className="w-4 h-4 rounded-full bg-[#ECC665] text-[#1A1406] flex items-center justify-center shadow-inner">
-                  <ChevronRight className="w-3 h-3 stroke-[3]" />
-                </div>
+                <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
               </button>
             </div>
           </div>
@@ -355,10 +252,6 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
 
         </div>
 
-        {/* ========================================================================= */}
-        {/* 4.1. DAILY WISDOM FROM ANCIENT AXUMITE MANUSCRIPTS                        */}
-        {/* ========================================================================= */}
-        <DailyWisdomCard onSaveInsight={onSaveInsight} />
 
         {/* ========================================================================= */}
         {/* 4.5. FEATURED SCHOLARSHIPS & JOB SEARCH HERO BANNERS                       */}
@@ -378,29 +271,21 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
                 <div className="min-w-0">
                   <div className="flex items-center space-x-1.5 flex-wrap">
                     <h3 className="text-[13.5px] sm:text-[14.5px] font-black tracking-tight text-white truncate">
-                      {language === 'ti' ? 'ስራሕ ድለ (Job Search)' : 'Axumite AI Job Assistant'}
+                      {isTigrinya ? 'ስራሕ ድለ (Job Search)' : 'Axumite AI Job Assistant'}
                     </h3>
                     <span className="px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-500/40 rounded-md font-mono shrink-0">
-                      {language === 'ti' ? 'AI ሓጋዚ' : 'CAREER AI'}
+                      {isTigrinya ? 'AI ሓጋዚ' : 'CAREER AI'}
                     </span>
                   </div>
                   <p className="text-[10.5px] sm:text-[11px] text-blue-100/90 font-medium mt-0.5 leading-tight truncate">
-                    {language === 'ti' ? 'ንዓኻ ዝሰማማዕ ስራሕ ምድላይ፣ ምድላው CVን ቃለ-መሕትትን' : 'Find tailored vacancies, draft AI CVs & interview coaching'}
+                    {isTigrinya ? 'ንዓኻ ዝሰማማዕ ስራሕ ምድላይ፣ ምድላው CVን ቃለ-መሕትትን' : 'Find tailored vacancies, draft AI CVs & interview coaching'}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsJobSearchModalOpen(true);
-                }}
-                className="py-1.5 px-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:brightness-110 text-white font-black text-xs flex items-center space-x-1 shadow-md active:scale-95 transition-all cursor-pointer shrink-0 border border-blue-300/50"
-              >
-                <span>{language === 'ti' ? 'ድለ' : 'Find'}</span>
-                <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
-              </button>
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sky-300 shrink-0 group-hover:translate-x-1 transition-transform border border-sky-400/30">
+                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              </div>
             </div>
           </div>
 
@@ -418,29 +303,21 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
                 <div className="min-w-0">
                   <div className="flex items-center space-x-1.5 flex-wrap">
                     <h3 className="text-[13.5px] sm:text-[14.5px] font-black tracking-tight text-[#FFF2C2] truncate">
-                      {language === 'ti' ? 'ዕድላት ስኮላርሺፕ (Scholarships)' : 'Global Scholarships & Grants'}
+                      {isTigrinya ? 'ዕድላት ስኮላርሺፕ (Scholarships)' : 'Global Scholarships & Grants'}
                     </h3>
                     <span className="px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-md font-mono shrink-0">
-                      {language === 'ti' ? '100% ነጻ' : 'FREE'}
+                      {isTigrinya ? '100% ነጻ' : 'FREE'}
                     </span>
                   </div>
                   <p className="text-[10.5px] sm:text-[11px] text-blue-100/90 font-medium mt-0.5 leading-tight truncate">
-                    {language === 'ti' ? 'ዓለምለኸ ናጻ ናይ ትምህርቲ ዕድላት፣ ወግዓዊ መላግቦታትን AI ደብዳበን' : 'Verified official portals, full funding, and AI SOP essay builder'}
+                    {isTigrinya ? 'ዓለምለኸ ናጻ ናይ ትምህርቲ ዕድላት፣ ወግዓዊ መላግቦታትን AI ደብዳበን' : 'Verified official portals, full funding, and AI SOP essay builder'}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsScholarshipModalOpen(true);
-                }}
-                className="py-1.5 px-3 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:brightness-110 text-slate-950 font-black text-xs flex items-center space-x-1 shadow-md shadow-amber-900/30 active:scale-95 transition-all cursor-pointer shrink-0 border border-amber-200"
-              >
-                <span>{language === 'ti' ? 'ርአ' : 'Explore'}</span>
-                <ChevronRight className="w-3.5 h-3.5 stroke-[3]" />
-              </button>
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-amber-300 shrink-0 group-hover:translate-x-1 transition-transform border border-amber-400/30">
+                <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              </div>
             </div>
           </div>
         </div>
@@ -611,25 +488,25 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             </div>
           </div>
 
-          {/* Tool 8: Image Analyzer */}
+          {/* Tool 8: AI Prompt Forge Studio */}
           <div
-            onClick={() => setActiveTab('vision')}
+            onClick={() => setActiveTab('prompt-forge')}
             className="bg-white rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all border border-slate-100/90 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98]"
           >
             <div className="absolute right-0 bottom-0 text-cyan-500/10 select-none pointer-events-none translate-x-1 translate-y-1">
-              <Camera className="w-16 h-16" />
+              <Sparkles className="w-16 h-16" />
             </div>
             <div>
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0891B2] via-[#06B6D4] to-[#22D3EE] flex items-center justify-center text-white shadow-md shadow-cyan-500/25 ring-4 ring-cyan-500/10">
-                <Camera className="w-5 h-5" />
+                <Sparkles className="w-5 h-5" />
               </div>
             </div>
             <div className="space-y-0.5 relative z-10 mt-2">
               <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-cyan-600 transition-colors">
-                {t.toolImageAnalyzerTitle}
+                {isTigrinya ? 'AI ፕሮምፕት ፎርጅ (8K Forge)' : 'AI Prompt Forge Studio'}
               </h4>
               <p className="text-[11px] text-slate-500 leading-snug">
-                {t.toolImageAnalyzerDesc}
+                {isTigrinya ? 'ናይ 8K ስእልን ቪድዮን ፕሮምፕት ምንዳፍን ምምሕያሽን' : '8K cinematic prompt engineering & visual presets'}
               </p>
             </div>
           </div>
@@ -696,40 +573,17 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             <div className="space-y-0.5 relative z-10 mt-2">
               <div className="flex items-center space-x-1">
                 <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-amber-600 transition-colors">
-                  {language === 'ti' ? 'ኪነ-ጽሕፈት ግዕዝ' : "Ge'ez Calligraphy Studio"}
+                  {isTigrinya ? 'ኪነ-ጽሕፈት ግዕዝ' : "Ge'ez Calligraphy Studio"}
                 </h4>
                 <span className="text-[9px] font-black font-mono bg-amber-500/20 text-amber-800 px-1 rounded">4K</span>
               </div>
               <p className="text-[11px] text-slate-600 leading-snug">
-                {language === 'ti' ? 'ውቁብ ጥንታዊ ቅርጽታትን ማኅተምን ብናይ Canvas ቴክኖሎጂ' : 'Artistic talismanic seals, knotworks & mandalas'}
+                {isTigrinya ? 'ውቁብ ጥንታዊ ቅርጽታትን ማኅተምን ብናይ Canvas ቴክኖሎጂ' : 'Artistic talismanic seals, knotworks & mandalas'}
               </p>
             </div>
           </div>
 
-          {/* Tool 12: Scholarships & Grants */}
-          <div
-            onClick={() => setIsScholarshipModalOpen(true)}
-            className="bg-white rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all border border-slate-100/90 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98]"
-          >
-            <div className="absolute right-0 bottom-0 text-emerald-600/10 select-none pointer-events-none translate-x-1 translate-y-1">
-              <GraduationCap className="w-16 h-16" />
-            </div>
-            <div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#047857] via-[#059669] to-[#10B981] flex items-center justify-center text-white shadow-md shadow-emerald-500/25 ring-4 ring-emerald-500/10">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="space-y-0.5 relative z-10 mt-2">
-              <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-emerald-600 transition-colors">
-                {language === 'ti' ? 'ዕድላት ትምህርቲ (Scholarships)' : 'Scholarships & Grants'}
-              </h4>
-              <p className="text-[11px] text-slate-500 leading-snug">
-                {language === 'ti' ? 'ናጻ ናይ ትምህርቲ ዕድላት ፈትሹ' : 'Explore verified global scholarship opportunities'}
-              </p>
-            </div>
-          </div>
-
-          {/* Tool 13: AI Video Translator & Dubbing */}
+          {/* Tool 12: AI Video Translator & Dubbing */}
           <div
             onClick={onOpenVideoTranslator}
             className="bg-gradient-to-br from-[#FAF5FF] via-white to-[#FDF4FF] rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all border border-fuchsia-200/80 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98]"
@@ -745,17 +599,17 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             <div className="space-y-0.5 relative z-10 mt-2">
               <div className="flex items-center space-x-1">
                 <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-fuchsia-600 transition-colors">
-                  {language === 'ti' ? 'ተርጓሚ ቪድዮ (Video Dub)' : 'AI Video Translator'}
+                  {isTigrinya ? 'ተርጓሚ ቪድዮ (Video Dub)' : 'AI Video Translator'}
                 </h4>
                 <span className="text-[9px] font-black font-mono bg-fuchsia-500/20 text-fuchsia-800 px-1 rounded">DUB</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-snug">
-                {language === 'ti' ? 'ናይ ቪድዮ ቀጥታዊ ትርጉም፡ ደቢንግን ሳብስክሪፕሽንን' : 'Voice dubbing & synchronized subtitles for videos'}
+                {isTigrinya ? 'ናይ ቪድዮ ቀጥታዊ ትርጉም፡ ደቢንግን ሳብስክሪፕሽንን' : 'Voice dubbing & synchronized subtitles for videos'}
               </p>
             </div>
           </div>
 
-          {/* Tool 14: AI Business Hub & Copilot */}
+          {/* Tool 13: AI Business Hub & Copilot */}
           <div
             onClick={() => setActiveTab('business-hub')}
             className="bg-gradient-to-br from-[#FFFBF0] via-white to-[#FFF6E5] rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all border border-amber-300/80 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98]"
@@ -771,17 +625,17 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             <div className="space-y-0.5 relative z-10 mt-2">
               <div className="flex items-center space-x-1">
                 <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-amber-600 transition-colors">
-                  {language === 'ti' ? 'AI ናይ ንግዲ ሓጋዚ (Business Hub)' : 'AI Business Assistant'}
+                  {isTigrinya ? 'AI ናይ ንግዲ ሓጋዚ (Business Hub)' : 'AI Business Assistant'}
                 </h4>
                 <span className="text-[9px] font-black font-mono bg-amber-500/20 text-amber-800 px-1 rounded">PRO</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-snug">
-                {language === 'ti' ? 'ፕላን ንግዲ፡ ምርምር ዕዳጋ፡ ፋይናንስን AI ደብዳበታትን' : 'Business plans, market research, budgeting & invoices'}
+                {isTigrinya ? 'ፕላን ንግዲ፡ ምርምር ዕዳጋ፡ ፋይናንስን AI ደብዳበታትን' : 'Business plans, market research, budgeting & invoices'}
               </p>
             </div>
           </div>
 
-          {/* Tool 15: Tigray & Eritrea Cultural AI Experience */}
+          {/* Tool 14: Tigray & Eritrea Cultural AI Experience */}
           <div
             onClick={() => setActiveTab('cultural-explorer')}
             className="bg-gradient-to-br from-[#F0FDF4] via-white to-[#ECFDF5] rounded-2xl p-3.5 shadow-xs hover:shadow-md transition-all border border-emerald-300/80 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98]"
@@ -797,15 +651,43 @@ export const EritreanPremiereView: React.FC<EritreanPremiereViewProps> = ({
             <div className="space-y-0.5 relative z-10 mt-2">
               <div className="flex items-center space-x-1">
                 <h4 className="font-bold text-[#0F2856] text-sm group-hover:text-emerald-600 transition-colors">
-                  {language === 'ti' ? 'ባህላዊ ውርሻ (Cultural AI)' : 'Cultural AI & Heritage'}
+                  {isTigrinya ? 'ባህላዊ ውርሻ (Cultural AI)' : 'Cultural AI & Heritage'}
                 </h4>
                 <span className="text-[9px] font-black font-mono bg-emerald-500/20 text-emerald-800 px-1 rounded">HERITAGE</span>
               </div>
               <p className="text-[11px] text-slate-500 leading-snug">
-                {language === 'ti' ? 'ቅርሲታት፡ ካርታ፡ ምስላታት፡ ሙዚቃን ዲጂታል ማህደርን' : 'Historical sites, Buna ritual, proverbs, map & archive'}
+                {isTigrinya ? 'ቅርሲታት፡ ካርታ፡ ምስላታት፡ ሙዚቃን ዲጂታል ማህደርን' : 'Historical sites, Buna ritual, proverbs, map & archive'}
               </p>
             </div>
           </div>
+
+          {/* Tool 15: Sovereign Hibernation Standby Mode */}
+          {onOpenHibernation && (
+            <div
+              onClick={onOpenHibernation}
+              className="bg-gradient-to-br from-[#120E1E] via-[#1A142D] to-[#0A0713] rounded-2xl p-3.5 shadow-md hover:shadow-xl transition-all border border-amber-500/50 hover:border-amber-400 relative overflow-hidden cursor-pointer group flex flex-col justify-between min-h-[140px] active:scale-[0.98] text-slate-100"
+            >
+              <div className="absolute right-0 bottom-0 text-amber-500/15 select-none pointer-events-none translate-x-1 translate-y-1">
+                <Moon className="w-16 h-16" />
+              </div>
+              <div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#8E6D28] via-[#C5A059] to-[#F3E5AB] flex items-center justify-center text-black shadow-md shadow-amber-500/30 ring-4 ring-amber-500/20">
+                  <Moon className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="space-y-0.5 relative z-10 mt-2">
+                <div className="flex items-center space-x-1">
+                  <h4 className="font-bold text-amber-200 text-sm group-hover:text-amber-100 transition-colors font-serif">
+                    {isTigrinya ? 'ዕረፍቲ / ድቃስ (Standby)' : 'Hibernation Mode'}
+                  </h4>
+                  <span className="text-[9px] font-black font-mono bg-amber-500/30 text-amber-300 px-1 rounded border border-amber-500/40">ZEN</span>
+                </div>
+                <p className="text-[11px] text-amber-200/70 leading-snug">
+                  {isTigrinya ? 'ናይ ጸዓት ምዕቃብ፡ ሰዓትን ዕረፍትን ስክሪን' : 'Rolling sovereign emblem with ambient clock'}
+                </p>
+              </div>
+            </div>
+          )}
 
         </div>
 

@@ -45,8 +45,8 @@ export const INITIAL_NOTIFICATIONS: AppNotification[] = [
     id: 'notif_scholarship_daad_2026',
     titleTi: '🎓 ሓድሽ ዕድል ስኮላርሺፕ፡ DAAD ጀርመን 2026/27 ምሉእ ብምሉእ ዝተኸፍለ',
     titleEn: '🎓 New Scholarship Opportunity: DAAD Germany 2026/27 Intake Open',
-    bodyTi: 'መንግስቲ ጀርመን ንኤርትራውያንን ኣፍሪቃውያንን ተመሃሮ ምሉእ ናጻ ትምህርቲ፡ ናይ ወርሒ ኣበል (€934)፡ ናይ ነፋሪት ቲኬትን ናይ ጥዕና መድሕንን ይህብ ኣሎ።',
-    bodyEn: 'German Academic Exchange Service (DAAD) opens fully-funded Master & PhD scholarships for Eritrean & Global South scholars with monthly stipend (€934) and travel allowance.',
+    bodyTi: 'መንግስቲ ጀርመን ንተጋሩን ኣፍሪቃውያንን ተመሃሮ ምሉእ ናጻ ትምህርቲ፡ ናይ ወርሒ ኣበል (€934)፡ ናይ ነፋሪት ቲኬትን ናይ ጥዕና መድሕንን ይህብ ኣሎ።',
+    bodyEn: 'German Academic Exchange Service (DAAD) opens fully-funded Master & PhD scholarships for Tigray & Global South scholars with monthly stipend (€934) and travel allowance.',
     category: 'scholarship',
     timestamp: 'ቅድሚ 15 ደቒቕ • 15m ago',
     isoDate: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
@@ -240,10 +240,89 @@ export async function requestBrowserPushPermission(): Promise<'granted' | 'denie
   }
 }
 
+// Speak notification aloud localized in Tigrinya using Neural Speech Synthesis
+export function speakNotificationInTigrinya(
+  notif: AppNotification,
+  dialect: 'ti' | 'ti_tg' | 'en' | 'de' | 'bilingual' = 'ti'
+): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+  try {
+    window.speechSynthesis.cancel();
+
+    const isTigrinya = dialect === 'ti' || dialect === 'ti_tg' || dialect === 'bilingual';
+    const textToSpeak = isTigrinya
+      ? `${notif.titleTi}። ${notif.bodyTi}`
+      : `${notif.titleEn}. ${notif.bodyEn}`;
+
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = dialect === 'ti_tg' ? 'ti-ET' : isTigrinya ? 'ti-ER' : dialect === 'de' ? 'de-DE' : 'en-US';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    if (isTigrinya) {
+      const hornVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('ti') ||
+          v.lang.startsWith('am') ||
+          v.name.toLowerCase().includes('tigrinya') ||
+          v.name.toLowerCase().includes('amharic') ||
+          v.name.toLowerCase().includes('ethiopia') ||
+          v.name.toLowerCase().includes('eritrea')
+      );
+      if (hornVoice) {
+        utterance.voice = hornVoice;
+      }
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('Speech synthesis for notification failed:', err);
+  }
+}
+
+// Speak any custom system audio response localized in Tigrinya
+export function speakCustomTigrinyaAudio(
+  message: string,
+  dialect: 'ti' | 'ti_tg' | 'en' | 'de' | 'bilingual' = 'ti'
+): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis || !message) return;
+
+  try {
+    window.speechSynthesis.cancel();
+    const isTigrinya = dialect === 'ti' || dialect === 'ti_tg' || dialect === 'bilingual';
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.lang = dialect === 'ti_tg' ? 'ti-ET' : isTigrinya ? 'ti-ER' : dialect === 'de' ? 'de-DE' : 'en-US';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    if (isTigrinya) {
+      const hornVoice = voices.find(
+        (v) =>
+          v.lang.startsWith('ti') ||
+          v.lang.startsWith('am') ||
+          v.name.toLowerCase().includes('tigrinya') ||
+          v.name.toLowerCase().includes('amharic') ||
+          v.name.toLowerCase().includes('ethiopia') ||
+          v.name.toLowerCase().includes('eritrea')
+      );
+      if (hornVoice) {
+        utterance.voice = hornVoice;
+      }
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn('Speech synthesis for system message failed:', err);
+  }
+}
+
 // Trigger Web Push Notification if browser permission granted
 export function triggerBrowserPushNotification(
   notif: AppNotification,
-  language: 'ti' | 'en' = 'ti'
+  language: 'ti' | 'ti_tg' | 'en' | 'de' | 'bilingual' = 'ti'
 ): boolean {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return false;
@@ -254,8 +333,9 @@ export function triggerBrowserPushNotification(
   }
 
   try {
-    const title = language === 'ti' ? notif.titleTi : notif.titleEn;
-    const body = language === 'ti' ? notif.bodyTi : notif.bodyEn;
+    const isTigrinya = language === 'ti' || language === 'ti_tg' || language === 'bilingual';
+    const title = isTigrinya ? notif.titleTi : notif.titleEn;
+    const body = isTigrinya ? notif.bodyTi : notif.bodyEn;
 
     const pushNotif = new Notification(title, {
       body,
@@ -333,7 +413,10 @@ export function createPaymentFailedNotification(params?: {
 }
 
 // Dispatch an in-app notification across active components and persistence
-export function dispatchAppNotification(notif: AppNotification): void {
+export function dispatchAppNotification(
+  notif: AppNotification,
+  options?: { speakAudio?: boolean; lang?: 'ti' | 'ti_tg' | 'en' | 'de' | 'bilingual' }
+): void {
   // 1. Store in localStorage
   const existing = getStoredNotifications();
   const updated = [notif, ...existing.filter((n) => n.id !== notif.id)];
@@ -345,12 +428,19 @@ export function dispatchAppNotification(notif: AppNotification): void {
     playGoldenNotificationChime();
   }
 
+  const activeLang = options?.lang || prefs.preferredLanguage || 'ti';
+
   // 3. Trigger Web Push if enabled
   if (prefs.enableWebPush) {
-    triggerBrowserPushNotification(notif, prefs.preferredLanguage === 'ti' ? 'ti' : 'en');
+    triggerBrowserPushNotification(notif, activeLang);
   }
 
-  // 4. Dispatch custom DOM event for active UI components
+  // 4. Optionally speak audio in Tigrinya
+  if (options?.speakAudio || (prefs.enableAudioChime && notif.urgency === 'urgent')) {
+    speakNotificationInTigrinya(notif, activeLang);
+  }
+
+  // 5. Dispatch custom DOM event for active UI components
   if (typeof window !== 'undefined') {
     const event = new CustomEvent(NOTIFICATION_EVENT_NAME, { detail: notif });
     window.dispatchEvent(event);
@@ -368,6 +458,59 @@ export function triggerPaymentFailedAlert(params?: {
   paymentMethod?: string;
 }): AppNotification {
   const notif = createPaymentFailedNotification(params);
+  dispatchAppNotification(notif);
+  return notif;
+}
+
+// Create a structured churn rate threshold breach alert notification
+export function createChurnAlertNotification(params: {
+  churnRate: number;
+  threshold: number;
+  period?: string;
+  lostMRR?: number;
+  affectedSubscribers?: number;
+}): AppNotification {
+  const rate = Number(params.churnRate.toFixed(1));
+  const threshold = Number(params.threshold.toFixed(1));
+  const period = params.period || 'Last 30 Days (Current Cycle)';
+  const lostMRR = params.lostMRR !== undefined ? params.lostMRR : Math.round(rate * 145);
+  const affected = params.affectedSubscribers !== undefined ? params.affectedSubscribers : Math.round(rate * 3.5);
+
+  return {
+    id: `notif_churn_alert_${Date.now()}`,
+    titleTi: `⚠️ መጠንቀቕታ ምቁራጽ ኣባልነት (Churn Rate Alert: ${rate}%)`,
+    titleEn: `⚠️ Subscription Churn Alert: ${rate}% (Threshold: ${threshold}%)`,
+    bodyTi: `ናይ መድረኽ ተጠቃሚ ምቁራጽ ወይ ስረዛ (Churn Rate) ናብ ${rate}% በጺሑ ካብቲ ዝተመደበ ደረት (${threshold}%) በሊጹ ኣሎ። ግምታዊ ዝጎደለ ወርሓዊ እቶት (Lost MRR): $${lostMRR} (${affected} ኣባላት)።`,
+    bodyEn: `Subscription churn rate has climbed to ${rate}%, surpassing your configured safety ceiling of ${threshold}% for ${period}. Estimated MRR impact: -$${lostMRR}/mo across ${affected} cancelled accounts.`,
+    category: 'churn_alert',
+    timestamp: 'ሕጂ • Just now',
+    isoDate: new Date().toISOString(),
+    read: false,
+    urgency: 'urgent',
+    actionLabelTi: 'ናይ MRR/Churn ሰሌዳ ርአ',
+    actionLabelEn: 'View MRR & Churn Analytics',
+    badgeText: `Churn ${rate}% > ${threshold}%`,
+    actionType: 'open_admin_metrics',
+    targetTab: 'payment-management',
+    churnDetails: {
+      churnRate: rate,
+      threshold,
+      period,
+      lostMRR,
+      affectedSubscribers: affected,
+    },
+  };
+}
+
+// Trigger Churn Threshold Breach Alert
+export function triggerChurnAlert(params: {
+  churnRate: number;
+  threshold: number;
+  period?: string;
+  lostMRR?: number;
+  affectedSubscribers?: number;
+}): AppNotification {
+  const notif = createChurnAlertNotification(params);
   dispatchAppNotification(notif);
   return notif;
 }

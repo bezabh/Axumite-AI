@@ -46,7 +46,7 @@ export const ROLE_DEFAULT_PRIVILEGES: Record<UserRole, UserPrivileges> = {
     canBypassMaintenance: false,
     canManagePrivileges: false,
   },
-  'ኤርትራዊ AI Pro': {
+  'ኣክሱማይት AI Pro': {
     canUseChat: true,
     canUseVision: true,
     canUsePromptForge: true,
@@ -137,8 +137,8 @@ export const PRIVILEGE_METADATA: Record<
     category: 'ai',
   },
   canUseAssistance: {
-    label: 'Eritrean AI Assistant Voice',
-    labelTi: 'ኤርትራዊ ድምጻዊ ረዳኢ',
+    label: 'Axumite AI Assistant Voice',
+    labelTi: 'ኣክሱማይት ድምጻዊ ረዳኢ',
     description: 'Enables hands-free voice synthesis, news briefing, and smart voice commands.',
     category: 'ai',
   },
@@ -227,6 +227,8 @@ export const DEFAULT_APP_CONFIG: AppSystemConfig = {
     rollingBackgroundDefault: true,
     enableCursorGuide: true,
   },
+  churnThreshold: 3.0,
+  enableChurnAlert: true,
 };
 
 export function getUserEffectivePrivileges(user: UserProfile | ManagedUser | null | undefined): UserPrivileges {

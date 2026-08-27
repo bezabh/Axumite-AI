@@ -9,6 +9,7 @@ import { useSubscription, SubscriptionTier, BillingCycle, InvoiceItem } from '..
 import { useLanguage } from '../context/LanguageContext';
 import { UserProfile } from '../types';
 import { InvoiceReceiptModal } from './InvoiceReceiptModal';
+import { ModernCheckoutView } from './ModernCheckoutView';
 import googlePlayIcon from '../assets/images/axumite_ai_logo_1786607890310.jpg';
 
 interface PricingPlanComparisonModalProps {
@@ -37,7 +38,13 @@ export const PricingPlanComparisonModal: React.FC<PricingPlanComparisonModalProp
     changePlan,
   } = useSubscription();
 
-  const [activeTab, setActiveTab] = useState<'plans' | 'management' | 'history'>('plans');
+  const [activeTab, setActiveTab] = useState<'plans' | 'checkout' | 'management' | 'history'>('plans');
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<{ id: string; name: string; price: string; raw: number }>({
+    id: 'pro',
+    name: 'Sovereign Pro AI',
+    price: '$79.99',
+    raw: 79.99,
+  });
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceItem | null>(null);
 
@@ -146,6 +153,15 @@ export const PricingPlanComparisonModal: React.FC<PricingPlanComparisonModalProp
                 }`}
               >
                 {language === 'ti' ? 'ፕላናት (Plans)' : 'Plans & Pricing'}
+              </button>
+              <button
+                onClick={() => setActiveTab('checkout')}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                  activeTab === 'checkout' ? 'bg-[#0284C7] text-white font-bold' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>{language === 'ti' ? 'ሞባይል ክፍሊት (Card)' : 'Mobile Checkout'}</span>
               </button>
               <button
                 onClick={() => setActiveTab('management')}
@@ -322,7 +338,7 @@ export const PricingPlanComparisonModal: React.FC<PricingPlanComparisonModalProp
                     </div>
 
                     <h3 className="text-xl font-bold text-white mt-1">
-                      {language === 'ti' ? 'ኤርትራዊ AI Pro' : 'Sovereign Pro AI'}
+                      {language === 'ti' ? 'ኣክሱማይት AI Pro' : 'Sovereign Pro AI'}
                     </h3>
 
                     <div className="mt-3 flex items-baseline space-x-1">
@@ -511,6 +527,83 @@ export const PricingPlanComparisonModal: React.FC<PricingPlanComparisonModalProp
                   )}
                 </div>
               </div>
+
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: MODERN CARD & MOBILE CHECKOUT                                        */}
+          {/* ========================================================================= */}
+          {activeTab === 'checkout' && (
+            <div className="space-y-6 animate-fade-in flex flex-col items-center">
+              
+              {/* Plan Switcher Pills */}
+              <div className="flex flex-wrap items-center justify-center gap-2 bg-[#141726] p-1.5 rounded-2xl border border-slate-800">
+                <button
+                  onClick={() => setSelectedPlanForCheckout({
+                    id: 'pro',
+                    name: 'Sovereign Pro AI',
+                    price: billingCycle === 'yearly' ? '$79.99' : '$9.99',
+                    raw: billingCycle === 'yearly' ? 79.99 : 9.99,
+                  })}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    selectedPlanForCheckout.id === 'pro'
+                      ? 'bg-amber-500 text-slate-950 font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Sovereign Pro ({billingCycle === 'yearly' ? '$79.99/yr' : '$9.99/mo'})
+                </button>
+                <button
+                  onClick={() => setSelectedPlanForCheckout({
+                    id: 'enterprise',
+                    name: 'Enterprise Scriptorium',
+                    price: billingCycle === 'yearly' ? '$249.99' : '$29.99',
+                    raw: billingCycle === 'yearly' ? 249.99 : 29.99,
+                  })}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    selectedPlanForCheckout.id === 'enterprise'
+                      ? 'bg-amber-500 text-slate-950 font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Enterprise ({billingCycle === 'yearly' ? '$249.99/yr' : '$29.99/mo'})
+                </button>
+                <button
+                  onClick={() => setSelectedPlanForCheckout({
+                    id: 'lifetime',
+                    name: 'Lifetime Sovereign Pass',
+                    price: '$199.00',
+                    raw: 199.0,
+                  })}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    selectedPlanForCheckout.id === 'lifetime'
+                      ? 'bg-amber-500 text-slate-950 font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Lifetime ($199.00 one-time)
+                </button>
+              </div>
+
+              {/* Modern Phone Checkout */}
+              <ModernCheckoutView
+                user={user}
+                planName={selectedPlanForCheckout.name}
+                planId={selectedPlanForCheckout.id}
+                amountFormatted={selectedPlanForCheckout.price}
+                rawAmount={selectedPlanForCheckout.raw}
+                currency="USD"
+                billingCycle={selectedPlanForCheckout.id === 'lifetime' ? 'one_time' : billingCycle}
+                withTrial={selectedPlanForCheckout.id !== 'lifetime'}
+                onBack={() => setActiveTab('plans')}
+                onManageOtherMethods={() => setActiveTab('plans')}
+                onSuccess={() => {
+                  setTimeout(() => {
+                    setActiveTab('management');
+                  }, 1200);
+                }}
+              />
 
             </div>
           )}
@@ -777,7 +870,7 @@ export const PricingPlanComparisonModal: React.FC<PricingPlanComparisonModalProp
                       ? 'Axumite Enterprise'
                       : pendingPlanId === 'lifetime_pass'
                       ? 'Lifetime Sovereign Pass'
-                      : 'Eritrean AI Sovereign Pro'}
+                      : 'Axumite AI Sovereign Pro'}
                   </h3>
                   <p className="text-xs text-amber-400 font-semibold mt-0.5">
                     {pendingWithTrial ? '14 Days Free, then $79.99/year' : pendingPlanId === 'lifetime_pass' ? '$199.99 One-Time' : '$79.99/year'}

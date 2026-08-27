@@ -100,7 +100,7 @@ const VOICE_COMMANDS: VoiceCommandItem[] = [
     phonetic: 'Kfet Kiflit / PRO Miebale',
     english: 'Open Payment / Upgrade PRO',
     actionDesc: 'Launches Bank of Eritrea, Nakfa, Stripe & Diaspora payment portal.',
-    actionDescTi: 'ናይ ኤርትራ ባንክ፡ ናቕፋ፡ ስትራይፕን ዓለምለኸ ክፍሊትን መደብ ይኸፍት።',
+    actionDescTi: 'ናይ ትግራይ ባንክ፡ ብር፡ ስትራይፕን ዓለምለኸ ክፍሊትን መደብ ይኸፍት።',
     samplePrompt: 'ክፈት ክፍሊት',
     tag: 'Navigation',
   },

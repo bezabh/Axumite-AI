@@ -6,6 +6,9 @@ import {
   Tag, Plus, Trash2, Printer, ShieldCheck, Eye, Coins, Sparkles, Building2, Smartphone, Globe
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { AdminRevenueChurnChart } from './AdminRevenueChurnChart';
+import { getStoredAppConfig } from '../lib/permissions';
+import { exportPaymentsToCSV, exportPaymentsToPDF } from '../utils/adminDataExport';
 
 interface PromoCode {
   code: string;
@@ -191,7 +194,7 @@ export const PaymentManagementView: React.FC = () => {
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   
   // Modals & subviews
-  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'promos' | 'pricing'>('transactions');
+  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'promos' | 'pricing' | 'mrr_churn'>('transactions');
   const [viewingReceipt, setViewingReceipt] = useState<PaymentTransaction | null>(null);
   const [refundTarget, setRefundTarget] = useState<PaymentTransaction | null>(null);
   const [refundReason, setRefundReason] = useState('');
@@ -317,28 +320,13 @@ export const PaymentManagementView: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Transaction ID', 'Customer', 'Email', 'Plan', 'Amount', 'Currency', 'Method', 'Status', 'Date', 'Invoice'];
-    const rows = transactions.map(t => [
-      t.transactionId,
-      `"${t.customerName}"`,
-      t.customerEmail,
-      `"${t.planName}"`,
-      t.amount,
-      t.currency,
-      `"${t.paymentMethod}"`,
-      t.status,
-      t.timestamp,
-      t.invoiceNumber
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `axumite_financial_ledger_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportPaymentsToCSV(transactions);
     showToast('Financial transactions exported as CSV.');
+  };
+
+  const handleExportPDF = () => {
+    exportPaymentsToPDF(transactions);
+    showToast('Payment summary report generated as PDF.');
   };
 
   return (
@@ -365,18 +353,27 @@ export const PaymentManagementView: React.FC = () => {
             </div>
             <p className="text-xs sm:text-sm text-slate-300">
               {language === 'ti'
-                ? 'ምሕደራ ዲጂታል ክፍሊታት፡ ባንክታት ኤርትራ፡ ቅናሽ ፕሮሞታት ከምኡ ውን ሰነዳት ረሲት።'
-                : 'Comprehensive financial governance, transaction ledger, local Eritrean banking clearance, and promo campaigns.'}
+                ? 'ምሕደራ ዲጂታል ክፍሊታት፡ ባንክታት ትግራይ፡ ቅናሽ ፕሮሞታት ከምኡ ውን ሰነዳት ረሲት።'
+                : 'Comprehensive financial governance, transaction ledger, local banking clearance, and promo campaigns.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-[#8E6D28]/40 hover:border-[#C5A059] text-[#F3E5AB] text-xs font-bold rounded-xl transition-all flex items-center space-x-2 cursor-pointer shadow-md"
+              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-amber-500/40 hover:border-amber-400 text-amber-200 text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-md active:scale-95"
+              title="Export Transactions as CSV Spreadsheet"
             >
-              <Download className="w-3.5 h-3.5 text-[#E1C47D]" />
-              <span>Export Ledger</span>
+              <Download className="w-3.5 h-3.5 text-amber-400" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="px-3.5 py-2 bg-[#1A162B] hover:bg-[#25203D] border border-[#8E6D28]/50 hover:border-[#C5A059] text-[#F3E5AB] text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer shadow-md active:scale-95"
+              title="Export Financial Summary as Official PDF Report"
+            >
+              <FileText className="w-3.5 h-3.5 text-[#E1C47D]" />
+              <span>Export PDF</span>
             </button>
             <button
               onClick={() => {
@@ -485,6 +482,18 @@ export const PaymentManagementView: React.FC = () => {
         >
           <Sparkles className="w-4 h-4 text-[#C5A059]" />
           <span>Tier Pricing Configuration</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('mrr_churn')}
+          className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center space-x-2 cursor-pointer ${
+            activeSubTab === 'mrr_churn'
+              ? 'bg-[#1D1830] text-[#F3E5AB] border border-[#C5A059]/60 shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4 text-emerald-400" />
+          <span>MRR & Churn Trends (6 Mo)</span>
         </button>
       </div>
 
@@ -784,6 +793,13 @@ export const PaymentManagementView: React.FC = () => {
             </ul>
           </div>
 
+        </div>
+      )}
+
+      {/* SubTab 4: MRR & Churn Rate Trends (6 Mo) */}
+      {activeSubTab === 'mrr_churn' && (
+        <div className="space-y-4 animate-fade-in">
+          <AdminRevenueChurnChart customThreshold={getStoredAppConfig().churnThreshold ?? 3.0} />
         </div>
       )}
 

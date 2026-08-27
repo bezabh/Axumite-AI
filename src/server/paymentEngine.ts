@@ -527,7 +527,7 @@ export async function verifyAndActivatePaymentSession(params: {
     created_at: now.toISOString(),
   };
   user.account_type = plan.tier === "enterprise" ? "enterprise" : plan.tier === "lifetime" ? "lifetime" : "premium";
-  user.role = plan.tier === "enterprise" ? "Axumite Sovereign Scholar" : "ኤርትራዊ AI Pro";
+  user.role = plan.tier === "enterprise" ? "Axumite Sovereign Scholar" : "ኣክሱማይት AI Pro";
   dbUsers.set(userId, user);
 
   // 4. Generate structured Tax Invoice
@@ -793,7 +793,7 @@ export async function reactivateUserSubscription(userId: string): Promise<{ succ
   const user = dbUsers.get(userId);
   if (user) {
     user.account_type = sub.plan.includes("enterprise") ? "enterprise" : "premium";
-    user.role = sub.plan.includes("enterprise") ? "Axumite Sovereign Scholar" : "ኤርትራዊ AI Pro";
+    user.role = sub.plan.includes("enterprise") ? "Axumite Sovereign Scholar" : "ኣክሱማይት AI Pro";
     dbUsers.set(userId, user);
   }
 
@@ -846,7 +846,7 @@ export async function changeUserPlan(userId: string, targetPlanId: string, curre
   const user = dbUsers.get(userId);
   if (user) {
     user.account_type = targetPlan.tier === "enterprise" ? "enterprise" : targetPlan.tier === "lifetime" ? "lifetime" : "premium";
-    user.role = targetPlan.tier === "enterprise" ? "Axumite Sovereign Scholar" : "ኤርትራዊ AI Pro";
+    user.role = targetPlan.tier === "enterprise" ? "Axumite Sovereign Scholar" : "ኣክሱማይት AI Pro";
     dbUsers.set(userId, user);
   }
 

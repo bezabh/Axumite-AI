@@ -2,6 +2,7 @@ export type AppTab =
   | 'chat' 
   | 'assistance' 
   | 'payment' 
+  | 'rewards'
   | 'vision' 
   | 'prompt-forge' 
   | 'translator' 
@@ -18,7 +19,8 @@ export type AppTab =
   | 'user-management'
   | 'payment-management'
   | 'customer-management'
-  | 'admin-config';
+  | 'admin-config'
+  | 'android-app';
 
 export type QueryMode = 'general' | 'deep-reasoning' | 'ancient-script' | 'creative';
 
@@ -26,7 +28,7 @@ export type UserRole =
   | 'Creator'
   | 'Admin' 
   | 'Axumite Sovereign Scholar' 
-  | 'ኤርትራዊ AI Pro' 
+  | 'ኣክሱማይት AI Pro' 
   | 'Free Member'
   | 'Guest'
   | 'Suspended';
@@ -82,6 +84,20 @@ export interface AppSystemConfig {
     rollingBackgroundDefault: boolean;
     enableCursorGuide: boolean;
   };
+  churnThreshold?: number; // Target churn percentage ceiling (e.g. 3.0%)
+  enableChurnAlert?: boolean; // Enable proactive push alerts when churn exceeds threshold
+}
+
+export type UIThemeScheme = 'high-contrast-gold' | 'soft-ambient-gold' | 'balanced-gold';
+
+export interface UserThemePreferences {
+  scheme: UIThemeScheme;
+  goldIntensity?: 'soft' | 'balanced' | 'rich' | 'pure-axum';
+  themeHue?: string;
+  goldShimmerEffect?: boolean;
+  borderGlow?: boolean;
+  customAccentHex?: string;
+  updatedAt?: string;
 }
 
 export interface UserProfile {
@@ -99,8 +115,16 @@ export interface UserProfile {
   joinedDate: string;
   offlineAccessEnabled: boolean;
   savedInsightsCount: number;
+  notificationsEnabled?: boolean;
+  autoBackupEnabled?: boolean;
+  soundEffectsEnabled?: boolean;
+  ambientSoundEnabled?: boolean;
+  ambientSoundVolume?: number;
+  ambientInstrument?: 'masinko' | 'kirar' | 'washint' | 'ensemble';
   privileges?: Partial<UserPrivileges>;
   customPrivilegesEnabled?: boolean;
+  themePreference?: UIThemeScheme;
+  themeConfig?: UserThemePreferences;
 }
 
 export interface ManagedUser {
@@ -411,7 +435,7 @@ export interface AppNotification {
   titleEn: string;
   bodyTi: string;
   bodyEn: string;
-  category: 'scholarship' | 'system_update' | 'security' | 'feature' | 'payment_failed' | 'payment';
+  category: 'scholarship' | 'system_update' | 'security' | 'feature' | 'payment_failed' | 'payment' | 'churn_alert';
   timestamp: string;
   isoDate: string;
   read: boolean;
@@ -422,7 +446,7 @@ export interface AppNotification {
   actionLabelEn?: string;
   badgeText?: string;
   icon?: string;
-  actionType?: 'navigate_tab' | 'external_url' | 'open_scholarship' | 'open_system_status' | 'open_payment';
+  actionType?: 'navigate_tab' | 'external_url' | 'open_scholarship' | 'open_system_status' | 'open_payment' | 'open_admin_metrics';
   targetTab?: string;
   paymentDetails?: {
     planName?: string;
@@ -432,6 +456,13 @@ export interface AppNotification {
     invoiceNumber?: string;
     last4?: string;
     paymentMethod?: string;
+  };
+  churnDetails?: {
+    churnRate: number;
+    threshold: number;
+    period?: string;
+    lostMRR?: number;
+    affectedSubscribers?: number;
   };
 }
 

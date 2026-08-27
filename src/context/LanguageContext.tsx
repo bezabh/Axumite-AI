@@ -14,7 +14,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguageState] = useState<Language>(() => {
     try {
       const stored = localStorage.getItem('axumite_app_language');
-      if (stored === 'en' || stored === 'ti' || stored === 'de') {
+      if (stored === 'en' || stored === 'ti' || stored === 'ti_tg' || stored === 'de') {
         return stored as Language;
       }
       const userProfile = localStorage.getItem('axumite_user_profile');
@@ -22,6 +22,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const parsed = JSON.parse(userProfile);
         if (parsed.preferredLanguage === 'en') return 'en';
         if (parsed.preferredLanguage === 'de') return 'de';
+        if (parsed.preferredLanguage === 'ti-ET' || parsed.preferredLanguage === 'ti_tg') return 'ti_tg';
+        if (parsed.preferredLanguage === 'ti-ER' || parsed.preferredLanguage === 'ti') return 'ti';
       }
     } catch {
       // ignore storage errors
@@ -37,7 +39,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const userProfileStr = localStorage.getItem('axumite_user_profile');
       if (userProfileStr) {
         const parsed = JSON.parse(userProfileStr);
-        parsed.preferredLanguage = lang === 'en' ? 'en' : lang === 'de' ? 'de' : 'ti-ER';
+        parsed.preferredLanguage = lang === 'en' ? 'en' : lang === 'de' ? 'de' : 'ti';
         localStorage.setItem('axumite_user_profile', JSON.stringify(parsed));
       }
     } catch (err) {
@@ -46,7 +48,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const toggleLanguage = () => {
-    if (language === 'ti') setLanguage('en');
+    if (language === 'ti' || language === 'ti_tg') setLanguage('en');
     else if (language === 'en') setLanguage('de');
     else setLanguage('ti');
   };
